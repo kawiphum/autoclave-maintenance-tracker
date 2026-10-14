@@ -1,3 +1,4 @@
+from sqlalchemy import text
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date
@@ -160,86 +161,69 @@ elif menu == "บันทึกประวัติ PM / Calibrate":
                     st.success(f"บันทึกสำเร็จ! วันที่ต้องตรวจ {task_type} ครั้งถัดไปคือ: **{next_date}**")
 
 # ==========================================
-# 3. จัดการ/แก้ไข/ลบประวัติ (EDIT & DELETE)
+# จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค
 # ==========================================
-elif menu == "จัดการ/แก้ไขประวัติ (Edit/Delete)":
+elif menu == "จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค":
     st.header("🛠️ จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค")
     
     conn = db.get_connection()
-    equipments = pd.read_sql_query("SELECT id, equipment_code, name FROM equipments", conn)
-    conn.close()
+    equipments = pd.read_sql_query(text("SELECT id, equipment_code, name, type FROM equipments"), conn)
     
     if equipments.empty:
-        st.info("ยังไม่มีข้อมูลเครื่องจักร")
+        st.warning("ยังไม่มีข้อมูลเครื่องจักรในระบบ")
+        conn.close()
     else:
-        eq_options = {f"[{row['equipment_code']}] {row['name']}": row["id"] for _, row in equipments.iterrows()}
-        selected_eq = st.selectbox("เลือกเครื่องจักรที่ต้องการดูประวัติ", options=list(eq_options.keys()))
-        selected_eq_id = eq_options[selected_eq]
+        eq_map = {f"[{row['equipment_code']}] {row['name']}": row for _, row in equipments.iterrows()}
+        selected_label = st.selectbox("เลือกเครื่องจักรที่ต้องการดูประวัติ", options=list(eq_map.keys()))
+        selected_eq = eq_map[selected_label]
+        eq_id = int(selected_eq["id"])
         
-        conn = db.get_connection()
-        records_df = pd.read_sql_query("""
-            SELECT id, task_type, service_date, next_due_date, technician, result, remarks 
-            FROM service_records 
-            WHERE equipment_id = ? 
-            ORDER BY service_date DESC, id DESC
-        """, conn, params=(selected_eq_id,))
+        # ดึงประวัติการตรวจเช็คของเครื่องนี้ (แก้ไขให้ใช้ text() และพารามิเตอร์ :eq_id)
+        records_query = text("SELECT * FROM service_records WHERE equipment_id = :eq_id ORDER BY service_date DESC")
+        records = pd.read_sql_query(records_query, conn, params={"eq_id": eq_id})
         conn.close()
         
-        if records_df.empty:
-            st.warning("เครื่องนี้ยังไม่มีประวัติการบันทึกตรวจเช็ค")
+        if records.empty:
+            st.info("เครื่องจักรนี้ยังไม่มีประวัติการตรวจเช็ค PM หรือ Calibration")
         else:
-            st.write(f"พบประวัติการตรวจเช็คทั้งหมด **{len(records_df)}** รายการ:")
-            st.dataframe(
-                records_df.rename(columns={
-                    "id": "Record ID", "task_type": "ประเภท", "service_date": "วันที่เข้าตรวจ",
-                    "next_due_date": "รอบถัดไป", "technician": "ช่างผู้ตรวจ",
-                    "result": "ผลตรวจ", "remarks": "หมายเหตุ"
-                }),
-                use_container_width=True, hide_index=True
-            )
+            st.subheader("รายการประวัติทั้งหมด")
+            st.dataframe(records[["id", "task_type", "service_date", "next_due_date", "technician", "result", "remarks"]], use_container_width=True)
             
-            st.divider()
-            st.subheader("✏️ เลือกรายการที่ต้องการแก้ไขหรือลบ")
-            
-            rec_options = {
-                f"ID {row['id']}: [{row['task_type']}] วันที่ {row['service_date']} โดย {row['technician']}": row['id'] 
-                for _, row in records_df.iterrows()
+            # ส่วนสำหรับเลือกรายการเพื่อแก้ไขหรือลบ
+            record_options = {
+                f"ID {r['id']} | {r['task_type']} | วันที่ {r['service_date']} | ผล: {r['result']}": r 
+                for _, r in records.iterrows()
             }
-            selected_rec_label = st.selectbox("เลือกรายการประวัติ", options=list(rec_options.keys()))
-            selected_rec_id = rec_options[selected_rec_label]
+            selected_rec_label = st.selectbox("เลือกรายการที่ต้องการแก้ไข / ลบ", list(record_options.keys()))
+            selected_rec = record_options[selected_rec_label]
             
-            current_row = records_df[records_df["id"] == selected_rec_id].iloc[0]
+            col_edit, col_del = st.columns(2)
             
-            with st.expander("📝 แก้ไขข้อมูลรายการนี้", expanded=True):
-                with st.form("edit_record_form"):
-                    try:
-                        parsed_date = datetime.strptime(current_row["service_date"], "%Y-%m-%d").date()
-                    except Exception:
-                        parsed_date = date.today()
+            # --- ส่วนแก้ไข ---
+            with col_edit:
+                with st.expander("✏️ แก้ไขข้อมูลรายการนี้"):
+                    with st.form("edit_rec_form"):
+                        new_date = st.date_input("วันที่ตรวจเช็ค", value=datetime.strptime(selected_rec["service_date"], "%Y-%m-%d").date())
+                        new_tech = st.text_input("ช่างผู้ตรวจ / Vendor", value=selected_rec["technician"] or "")
                         
-                    edit_date = st.date_input("วันที่ตรวจ", value=parsed_date)
-                    edit_tech = st.text_input("ช่างผู้ตรวจ / ผู้สอบเทียบ *", value=current_row["technician"])
-                    
-                    res_list = ["Passed", "Passed with Condition", "Failed"]
-                    res_idx = res_list.index(current_row["result"]) if current_row["result"] in res_list else 0
-                    edit_res = st.selectbox("ผลการตรวจ", res_list, index=res_idx)
-                    edit_remarks = st.text_area("หมายเหตุ / รายละเอียด", value=current_row["remarks"] if current_row["remarks"] else "")
-                    
-                    save_edit = st.form_submit_button("💾 บันทึกการแก้ไข")
-                    if save_edit:
-                        if not edit_tech.strip():
-                            st.error("❌ ช่างผู้ตรวจต้องไม่เป็นค่าว่าง")
-                        else:
-                            db.update_service_record(selected_rec_id, str(edit_date), edit_tech.strip(), edit_res, edit_remarks.strip())
-                            st.success("แก้ไขข้อมูลและอัปเดตรอบถัดไปเรียบร้อยแล้ว!")
+                        res_list = ["Passed", "Passed with Condition", "Failed"]
+                        res_idx = res_list.index(selected_rec["result"]) if selected_rec["result"] in res_list else 0
+                        new_res = st.selectbox("ผลการตรวจ", res_list, index=res_idx)
+                        new_rem = st.text_area("หมายเหตุ", value=selected_rec["remarks"] or "")
+                        
+                        if st.form_submit_button("บันทึกการแก้ไข"):
+                            db.update_service_record(selected_rec["id"], str(new_date), new_tech.strip(), new_res, new_rem.strip())
+                            st.success("อัปเดตข้อมูลเรียบร้อยแล้ว!")
                             st.rerun()
-
-            with st.expander("🗑️ ลบรายการนี้"):
-                st.warning("⚠️ หากลบรายการนี้ ระบบจะคำนวณรอบถัดไปของเครื่องใหม่จากประวัติที่เหลืออยู่")
-                if st.button("ยืนยันการลบประวัติตัวนี้", type="primary"):
-                    db.delete_service_record(selected_rec_id)
-                    st.success("ลบรายการประวัติเรียบร้อยแล้ว!")
-                    st.rerun()
+                            
+            # --- ส่วนลบ ---
+            with col_del:
+                with st.expander("🗑️ ลบรายการนี้"):
+                    st.warning(f"ต้องการลบรายการ {selected_rec['task_type']} วันที่ {selected_rec['service_date']} ใช่หรือไม่?")
+                    if st.button("ยืนยันการลบรายการ", type="primary"):
+                        db.delete_service_record(selected_rec["id"])
+                        st.success("ลบรายการเรียบร้อยแล้ว!")
+                        st.rerun()
 
 # ==========================================
 # 4. เครื่องมือคำนวณรอบถัดไป (DUE CALCULATOR)
