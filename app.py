@@ -161,16 +161,16 @@ elif menu == "บันทึกประวัติ PM / Calibrate":
                     st.success(f"บันทึกสำเร็จ! วันที่ต้องตรวจ {task_type} ครั้งถัดไปคือ: **{next_date}**")
 
 # ==========================================
-# จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค
+# 3. จัดการ/แก้ไขประวัติ (Edit/Delete)
 # ==========================================
-elif menu == "จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค":
+elif menu == "จัดการ/แก้ไขประวัติ (Edit/Delete)":
     st.header("🛠️ จัดการ แก้ไข หรือลบประวัติการตรวจเช็ค")
     
     conn = db.get_connection()
     equipments = pd.read_sql_query(text("SELECT id, equipment_code, name, type FROM equipments"), conn)
     
     if equipments.empty:
-        st.warning("ยังไม่มีข้อมูลเครื่องจักรในระบบ")
+        st.warning("⚠️ ยังไม่มีข้อมูลเครื่องจักรในระบบ กรุณาเพิ่มเครื่องจักรก่อน")
         conn.close()
     else:
         eq_map = {f"[{row['equipment_code']}] {row['name']}": row for _, row in equipments.iterrows()}
@@ -178,7 +178,7 @@ elif menu == "จัดการ แก้ไข หรือลบประว�
         selected_eq = eq_map[selected_label]
         eq_id = int(selected_eq["id"])
         
-        # ดึงประวัติการตรวจเช็คของเครื่องนี้ (แก้ไขให้ใช้ text() และพารามิเตอร์ :eq_id)
+        # ดึงประวัติการตรวจเช็คของเครื่องที่เลือก (รองรับ PostgreSQL / Supabase)
         records_query = text("SELECT * FROM service_records WHERE equipment_id = :eq_id ORDER BY service_date DESC")
         records = pd.read_sql_query(records_query, conn, params={"eq_id": eq_id})
         conn.close()
@@ -186,15 +186,17 @@ elif menu == "จัดการ แก้ไข หรือลบประว�
         if records.empty:
             st.info("เครื่องจักรนี้ยังไม่มีประวัติการตรวจเช็ค PM หรือ Calibration")
         else:
-            st.subheader("รายการประวัติทั้งหมด")
-            st.dataframe(records[["id", "task_type", "service_date", "next_due_date", "technician", "result", "remarks"]], use_container_width=True)
+            st.subheader("📋 ประวัติการตรวจเช็คที่ผ่านมา")
+            st.dataframe(
+                records[["id", "task_type", "service_date", "next_due_date", "technician", "result", "remarks"]], 
+                use_container_width=True
+            )
             
-            # ส่วนสำหรับเลือกรายการเพื่อแก้ไขหรือลบ
             record_options = {
-                f"ID {r['id']} | {r['task_type']} | วันที่ {r['service_date']} | ผล: {r['result']}": r 
+                f"ID {r['id']} | งาน: {r['task_type']} | วันที่: {r['service_date']} | ผล: {r['result']}": r 
                 for _, r in records.iterrows()
             }
-            selected_rec_label = st.selectbox("เลือกรายการที่ต้องการแก้ไข / ลบ", list(record_options.keys()))
+            selected_rec_label = st.selectbox("เลือกรายการที่ต้องการแก้ไข หรือลบ", list(record_options.keys()))
             selected_rec = record_options[selected_rec_label]
             
             col_edit, col_del = st.columns(2)
@@ -213,16 +215,16 @@ elif menu == "จัดการ แก้ไข หรือลบประว�
                         
                         if st.form_submit_button("บันทึกการแก้ไข"):
                             db.update_service_record(selected_rec["id"], str(new_date), new_tech.strip(), new_res, new_rem.strip())
-                            st.success("อัปเดตข้อมูลเรียบร้อยแล้ว!")
+                            st.success("✅ อัปเดตข้อมูลเรียบร้อยแล้ว!")
                             st.rerun()
                             
             # --- ส่วนลบ ---
             with col_del:
-                with st.expander("🗑️ ลบรายการนี้"):
+                with st.expander("🗑️ ลบรายการนี้ออกจากระบบ"):
                     st.warning(f"ต้องการลบรายการ {selected_rec['task_type']} วันที่ {selected_rec['service_date']} ใช่หรือไม่?")
                     if st.button("ยืนยันการลบรายการ", type="primary"):
                         db.delete_service_record(selected_rec["id"])
-                        st.success("ลบรายการเรียบร้อยแล้ว!")
+                        st.success("✅ ลบรายการเรียบร้อยแล้ว!")
                         st.rerun()
 
 # ==========================================
