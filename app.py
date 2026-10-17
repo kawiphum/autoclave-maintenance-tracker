@@ -11,31 +11,28 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# ระบบแจ้งเตือน (เปลี่ยนจากมุมขวาบน เป็นแสดงผลกลางจอแบบชัดเจน)
+# ระบบแจ้งเตือน
 # -------------------------------------------------------------
 def trigger_notification(message):
     st.session_state["success_msg"] = message
 
 # -------------------------------------------------------------
-# Custom CSS: Professional Enterprise Theme (ไม่มีอีโมจิ)
+# Custom CSS: Professional Enterprise Theme
 # -------------------------------------------------------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
 
-    /* ฟอนต์เนื้อหาทั่วไป ใช้ Sarabun (ทางการและอ่านง่าย) */
     html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button {
         font-family: 'Sarabun', sans-serif !important;
     }
 
-    /* ฟอนต์หัวข้อและตัวเลขสำคัญ ใช้ Prompt ให้ดูหนักแน่น */
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] {
         font-family: 'Prompt', sans-serif !important;
     }
 
     #MainMenu, footer, header {visibility: hidden;}
 
-    /* ปุ่มหลัก (Primary Button) บังคับเป็นสีเขียวทางการ ไม่ใช้สีแดง */
     button[kind="primary"] {
         background-color: #059669 !important;
         color: #ffffff !important;
@@ -50,7 +47,6 @@ st.markdown("""
         border-color: #047857 !important;
     }
 
-    /* ปุ่มรอง (Secondary Button) */
     button[kind="secondary"] {
         background-color: #334155 !important;
         color: #f8fafc !important;
@@ -63,7 +59,6 @@ st.markdown("""
         border-color: #64748b !important;
     }
 
-    /* การ์ดข้อมูล (Metric Cards) */
     .metric-container {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -87,7 +82,6 @@ st.markdown("""
         color: #f8fafc;
     }
 
-    /* แท็บเมนู (Tabs) */
     .stTabs [data-baseweb="tab-list"] {
         gap: 2rem;
         border-bottom: 1px solid #334155;
@@ -106,15 +100,13 @@ st.markdown("""
         border-bottom: 3px solid #059669 !important;
     }
 
-    /* ฟอร์มและช่องกรอกข้อมูล (แก้ปัญหาสีกลืนกัน) */
     div[data-testid="stForm"] {
-        background-color: #0f172a; /* สีพื้นหลังฟอร์ม (เข้มมาก) */
+        background-color: #0f172a; 
         border: 1px solid #334155;
         border-radius: 8px;
         padding: 2rem;
     }
     
-    /* ช่อง Input ให้สีสว่างกว่าพื้นหลังฟอร์มชัดเจน */
     input, textarea, div[data-baseweb="select"] > div {
         background-color: #1e293b !important; 
         border: 1px solid #475569 !important;
@@ -253,7 +245,6 @@ BRANCH_LIST = db.get_branches()
 
 st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.5rem;'>{hospital_name}</h1>", unsafe_allow_html=True)
 
-# จัดวางกล่องเลือกสาขาและปุ่มตั้งค่าให้อยู่ชิดซ้ายและเป็นระเบียบ
 col_h1, col_h2, col_h3 = st.columns([3, 2, 5])
 with col_h1:
     selected_branch = st.selectbox("พื้นที่ปฏิบัติงาน", options=BRANCH_LIST, key="branch_selector")
@@ -262,7 +253,6 @@ with col_h2:
     if st.button("ตั้งค่าระบบ", use_container_width=True):
         manage_org_modal(hospital_name, BRANCH_LIST, selected_branch)
 
-# แสดงแจ้งเตือน (แทนที่ Toast มุมจอ) ให้เด้งตรงกลางใต้ Header เลย
 if "success_msg" in st.session_state:
     st.success(st.session_state["success_msg"])
     del st.session_state["success_msg"]
@@ -314,7 +304,7 @@ with tab_overview:
 
     st.markdown(f"""
     <div class="metric-container">
-        <div class="metric-card">
+        <div class="metric-card card-success">
             <div class="metric-title">เครื่องจักรทั้งหมด</div>
             <div class="metric-value">{total_eq}</div>
         </div>
@@ -322,11 +312,11 @@ with tab_overview:
             <div class="metric-title">ประวัติการตรวจสอบ</div>
             <div class="metric-value">{total_services}</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card card-warning">
             <div class="metric-title" style="color:#F59E0B;">ใกล้ครบกำหนด</div>
             <div class="metric-value">{warning_cnt}</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card card-danger">
             <div class="metric-title" style="color:#EF4444;">เลยกำหนด</div>
             <div class="metric-value">{overdue_cnt}</div>
         </div>
@@ -354,7 +344,7 @@ with tab_overview:
         st.dataframe(filtered_df, hide_index=True, use_container_width=True)
 
 # =============================================================
-# TAB 2: ทะเบียนเครื่องจักร (แก้บั๊กช่องพิมพ์ไม่ได้)
+# TAB 2: ทะเบียนเครื่องจักร
 # =============================================================
 with tab_manage:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลงทะเบียนเครื่องจักรใหม่</h3>", unsafe_allow_html=True)
@@ -363,19 +353,16 @@ with tab_manage:
     existing_types = [t for t in df_equipments["type"].unique() if t not in default_types] if not df_equipments.empty else []
     all_type_options = default_types + existing_types + ["ระบุประเภทอื่น..."]
 
-    # 1. ย้ายกล่องเลือกประเภทเครื่องออกมา "นอกฟอร์ม" เพื่อให้พิมพ์โต้ตอบได้ทันที
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         selected_type = st.selectbox("ประเภทเครื่อง", options=all_type_options)
     
-    # ถ้ากดเลือก "ระบุประเภทอื่น..." ช่องข้อความด้านขวาจะโผล่ขึ้นมาทันที!
     if selected_type == "ระบุประเภทอื่น...":
         with col_t2:
             custom_type = st.text_input("พิมพ์ชื่อประเภทเครื่องใหม่")
     else:
         custom_type = selected_type
 
-    # 2. ฟอร์มรายละเอียดที่เหลือ
     with st.form("add_equipment_form", clear_on_submit=True):
         st.markdown("<p style='font-weight:600; margin-bottom:1rem; color:#94A3B8;'>รายละเอียดเครื่องจักร</p>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
@@ -459,7 +446,7 @@ with tab_log:
                         st.rerun()
 
 # =============================================================
-# TAB 4: ประวัติและแก้ไข
+# TAB 4: ประวัติและแก้ไข (อัปเดตการเรียงลำดับใหม่)
 # =============================================================
 with tab_history:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ค้นหาและแก้ไขประวัติ</h3>", unsafe_allow_html=True)
@@ -475,13 +462,27 @@ with tab_history:
         if eq_records.empty:
             st.info("ไม่มีประวัติการดำเนินการ")
         else:
+            # 1. คัดลอกข้อมูลและสร้างคอลัมน์ลำดับ 1, 2, 3...
+            display_records = eq_records.copy()
+            # จัดเรียงตามวันที่จากเก่าไปใหม่ (หรือใหม่ไปเก่า แล้วแต่ต้องการ)
+            # ในที่นี้เรียงจากวันที่ล่าสุด (เก่าไปใหม่)
+            display_records = display_records.sort_values(by="service_date", ascending=True).reset_index(drop=True)
+            # เพิ่มคอลัมน์ "ลำดับ" ให้เริ่มตั้งแต่ 1
+            display_records.insert(0, 'ลำดับ', range(1, len(display_records) + 1))
+            
+            # เรียงกลับให้แสดงอันใหม่สุดขึ้นก่อน
+            display_records = display_records.sort_values(by="service_date", ascending=False)
+            
+            # 2. นำไปแสดงผลใน st.dataframe โดยซ่อนคอลัมน์ id เดิม
             st.dataframe(
-                eq_records[["id", "task_type", "service_date", "technician", "result", "remarks"]],
+                display_records[["ลำดับ", "task_type", "service_date", "technician", "result", "remarks"]],
                 hide_index=True,
                 use_container_width=True
             )
 
             st.markdown("<br><p style='font-size:1rem; color:#94A3B8; margin-bottom:0.5rem;'>จัดการข้อมูลประวัติ</p>", unsafe_allow_html=True)
+            
+            # ตัวเลือกสำหรับจัดการรายการ
             rec_options = {f"{r['service_date']} | {r['task_type']} | {r['result']}": r for _, r in eq_records.iterrows()}
             c_rec1, c_rec2, c_rec3 = st.columns([2, 1, 1])
             with c_rec1:
