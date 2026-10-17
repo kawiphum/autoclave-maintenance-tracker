@@ -267,7 +267,7 @@ df_equipments, df_records = db.get_branch_data_cached(selected_branch)
 
 tab_overview, tab_manage, tab_log, tab_history, tab_calc = st.tabs([
     "ภาพรวมระบบ",
-    "ทะเบียนเครื่องจักร", 
+    "ลงทะเบียนเครื่องมือ", 
     "บันทึกผลตรวจสอบ",
     "ประวัติข้อมูล",
     "คำนวณรอบ"
