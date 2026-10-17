@@ -216,7 +216,7 @@ def delete_record_modal(record_id, task_title):
             st.rerun()
 
 # -------------------------------------------------------------
-# โหลดข้อมูลด้วยระบบ Cache (ไม่ต้องวิ่งถาม Database ซ้ำทุกคลิก)
+# โหลดข้อมูลด้วยระบบ Cache
 # -------------------------------------------------------------
 hospital_name = db.get_hospital_name()
 BRANCH_LIST = db.get_branches()
@@ -390,32 +390,32 @@ with tab_log:
                         st.rerun()
 
 # =============================================================
-# TAB 3: จัดการเครื่องจักร (ครอบ st.form ป้องกันการโหลดขณะพิมพ์)
+# TAB 3: จัดการเครื่องจักร (ใช้ st.selectbox แบบเลือกหรือพิมพ์เพิ่มเองได้ทันที)
 # =============================================================
 with tab_manage:
     st.subheader(f"⚙️ จัดการทะเบียนเครื่องจักร ({selected_branch})")
     st.info(f"📍 เครื่องจักรที่เพิ่มในหน้านี้ จะถูกบันทึกเข้าสู่ **{selected_branch}** โดยอัตโนมัติ")
     
-    base_types = ["Autoclave", "ETO", "Plasma Sterilizer", "Washer Disinfector"]
-    existing_custom_types = [t for t in df_equipments["type"].unique() if t not in base_types] if not df_equipments.empty else []
-    type_options = base_types + existing_custom_types + ["อื่นๆ (ระบุเอง)"]
+    default_types = ["Autoclave", "ETO", "Plasma Sterilizer", "Washer Disinfector"]
+    existing_types = [t for t in df_equipments["type"].unique() if t not in default_types] if not df_equipments.empty else []
+    all_type_options = default_types + existing_types
 
     with st.expander(f"➕ เพิ่มเครื่องจักรใหม่เข้าสู่ {selected_branch}", expanded=True):
-        # เลือกประเภทเครื่องด้านบนฟอร์ม (เพื่อให้สลับโหมด 'อื่นๆ' ได้ทันที)
-        selected_type_opt = st.selectbox("1️⃣ เลือกประเภทเครื่อง *", type_options, key="add_type_sel")
-        
-        # ฟอร์มกรอกข้อมูล (พิมพ์รหัส ชื่อ รุ่น จุดติดตั้ง ได้รวดเดียวโดยไม่กระตุกโหลด)
         with st.form("add_equipment_form", clear_on_submit=True):
-            st.markdown("2️⃣ **กรอกรายละเอียดเครื่องจักร** *(พิมพ์ให้ครบทุกช่องแล้วกดปุ่มบันทึกด้านล่าง)*")
+            st.markdown("กรอกรายละเอียดเครื่องจักร *(ช่อง **ประเภทเครื่อง** สามารถคลิกเลือกจากรายการ หรือพิมพ์ชื่อใหม่ลงไปได้ทันที)*")
             c1, c2, c3 = st.columns(3)
             with c1:
                 new_code = st.text_input("รหัสเครื่อง (Equipment Code) *", placeholder="เช่น ATC-01, ETO-01")
                 new_name = st.text_input("ชื่อเครื่อง *", placeholder="เช่น Autoclave 300L")
-                if selected_type_opt == "อื่นๆ (ระบุเอง)":
-                    custom_type = st.text_input("✍️ พิมพ์ระบุประเภทเครื่อง *", placeholder="เช่น Ultrasonic Cleaner, เครื่องซีลซอง")
-                else:
-                    custom_type = ""
-                    st.text_input("ประเภทที่เลือก", value=selected_type_opt, disabled=True)
+                
+                # ใช้ st.selectbox ร่วมกับฟอร์ม หรือใช้ st.text_input สำหรับพิมพ์ประเภทอิสระ
+                final_type = st.selectbox(
+                    "ประเภทเครื่อง * (เลือกหรือพิมพ์ได้)",
+                    options=all_type_options,
+                    index=0,
+                    help="หากไม่มีในรายการ สามารถเลือกอันใกล้เคียง หรือพิมพ์เพิ่มได้ที่ช่องด้านล่าง"
+                )
+                custom_type_input = st.text_input("✍️ หรือพิมพ์ระบุประเภทเอง (ถ้าไม่มีในตัวเลือกด้านบน)", placeholder="เช่น Ultrasonic Cleaner, เครื่องซีลซอง")
 
             with c2:
                 new_brand = st.text_input("ยี่ห้อ / รุ่น", placeholder="เช่น Getinge GSS67")
@@ -429,22 +429,24 @@ with tab_manage:
             submit_eq = st.form_submit_button(f"✨ บันทึกเครื่องจักรเข้า {selected_branch}", type="primary", use_container_width=True)
 
             if submit_eq:
-                final_type = custom_type.strip() if selected_type_opt == "อื่นๆ (ระบุเอง)" else selected_type_opt
+                # ถ้ามีการพิมพ์ในช่องพิมพ์เอง ให้ยึดตามที่พิมพ์ ถ้าไม่พิมพ์ให้ยึดจากตัวเลือกselectbox
+                chosen_type = custom_type_input.strip() if custom_type_input.strip() else final_type
+                
                 if not new_code.strip() or not new_name.strip():
                     st.error("⚠️ กรุณากรอกรหัสเครื่องและชื่อเครื่องให้ครบถ้วน")
-                elif not final_type:
-                    st.error("⚠️ กรุณาพิมพ์ระบุประเภทเครื่องในช่อง 'พิมพ์ระบุประเภทเครื่อง'")
+                elif not chosen_type:
+                    st.error("⚠️ กรุณาระบุประเภทเครื่อง")
                 else:
                     try:
                         db.add_equipment(
-                            new_code.strip(), new_name.strip(), final_type,
+                            new_code.strip(), new_name.strip(), chosen_type,
                             new_brand.strip(), new_loc.strip(),
                             int(new_pm_freq), int(new_cal_freq),
                             str(last_pm) if last_pm else None,
                             str(last_cal) if last_cal else None,
                             branch=selected_branch
                         )
-                        st.success(f"✅ เพิ่มเครื่องจักร '{new_name}' เข้าสู่ {selected_branch} เรียบร้อยแล้ว!")
+                        st.success(f"✅ เพิ่มเครื่องจักร '{new_name}' (ประเภท: {chosen_type}) เข้าสู่ {selected_branch} เรียบร้อยแล้ว!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาด: {e}")
@@ -461,7 +463,7 @@ with tab_manage:
             st.rerun()
 
 # =============================================================
-# TAB 4: ประวัติและแก้ไข (ใช้ข้อมูลจาก Cache ไม่ต้องคิวรีใหม่)
+# TAB 4: ประวัติและแก้ไข
 # =============================================================
 with tab_history:
     st.subheader(f"📜 ตรวจสอบและแก้ไขประวัติการบำรุงรักษา ({selected_branch})")
