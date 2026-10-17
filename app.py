@@ -31,7 +31,8 @@ st.markdown("""
         font-family: 'Prompt', sans-serif !important;
     }
 
-    #MainMenu, footer, header {visibility: hidden;}
+    /* จุดที่แก้ไข: เจาะจงซ่อนเฉพาะแถบด้านบนสุดของเว็บ ไม่ให้กระทบปฏิทิน */
+    #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
     button[kind="primary"] {
         background-color: #059669 !important;
