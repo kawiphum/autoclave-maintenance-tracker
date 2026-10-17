@@ -10,92 +10,81 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ระบบแจ้งเตือน (Toast) เมื่อมีการบันทึกหรือแก้ไข
-if "notify_msg" in st.session_state:
-    st.toast(st.session_state["notify_msg"])
-    del st.session_state["notify_msg"]
-
+# -------------------------------------------------------------
+# ระบบแจ้งเตือน (เปลี่ยนจากมุมขวาบน เป็นแสดงผลกลางจอแบบชัดเจน)
+# -------------------------------------------------------------
 def trigger_notification(message):
-    st.session_state["notify_msg"] = message
+    st.session_state["success_msg"] = message
 
 # -------------------------------------------------------------
-# Custom CSS: Professional Enterprise Theme (Sarabun + Prompt)
+# Custom CSS: Professional Enterprise Theme (ไม่มีอีโมจิ)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
 
-    /* ฟอนต์เนื้อหาทั่วไป ใช้ Sarabun (ทางการ) */
-    html, body, [class*="css"], .stMarkdown, .stText, input, textarea, select, button {
+    /* ฟอนต์เนื้อหาทั่วไป ใช้ Sarabun (ทางการและอ่านง่าย) */
+    html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button {
         font-family: 'Sarabun', sans-serif !important;
-        font-size: 16px;
     }
 
     /* ฟอนต์หัวข้อและตัวเลขสำคัญ ใช้ Prompt ให้ดูหนักแน่น */
-    h1, h2, h3, .metric-value, .stTabs [data-baseweb="tab"] {
+    h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] {
         font-family: 'Prompt', sans-serif !important;
     }
 
     #MainMenu, footer, header {visibility: hidden;}
 
-    /* สีปุ่มหลัก (Primary Button) เป็นสีเขียวเข้ม */
-    .stButton>button[kind="primary"] {
-        background-color: #10B981 !important;
-        color: white !important;
-        border: none !important;
+    /* ปุ่มหลัก (Primary Button) บังคับเป็นสีเขียวทางการ ไม่ใช้สีแดง */
+    button[kind="primary"] {
+        background-color: #059669 !important;
+        color: #ffffff !important;
+        border: 1px solid #059669 !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
-        padding: 0.5rem 1rem !important;
-        transition: all 0.2s ease !important;
-        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        padding: 0.5rem 1.5rem !important;
+        transition: all 0.2s ease;
     }
-    .stButton>button[kind="primary"]:hover {
-        background-color: #059669 !important;
-        box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3);
+    button[kind="primary"]:hover {
+        background-color: #047857 !important;
+        border-color: #047857 !important;
     }
 
-    /* ปุ่มรอง (Secondary Button) เป็นสีเทา/ดำ */
-    .stButton>button[kind="secondary"] {
+    /* ปุ่มรอง (Secondary Button) */
+    button[kind="secondary"] {
         background-color: #334155 !important;
-        color: #F8FAFC !important;
+        color: #f8fafc !important;
         border: 1px solid #475569 !important;
         border-radius: 6px !important;
         font-weight: 500 !important;
     }
-    .stButton>button[kind="secondary"]:hover {
+    button[kind="secondary"]:hover {
         background-color: #475569 !important;
-        border-color: #64748B !important;
+        border-color: #64748b !important;
     }
 
-    /* กล่องข้อมูล (Metric Cards) เพิ่มลูกเล่นแถบสีด้านบนและเงา */
+    /* การ์ดข้อมูล (Metric Cards) */
     .metric-container {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1.5rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
     .metric-card {
-        background-color: #1E293B;
+        background-color: #1e293b;
         padding: 1.5rem;
         border-radius: 8px;
         border: 1px solid #334155;
-        border-top: 4px solid #3B82F6; /* แถบสีเน้น */
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
-    .card-warning { border-top-color: #F59E0B; }
-    .card-danger { border-top-color: #EF4444; }
-    .card-success { border-top-color: #10B981; }
-
     .metric-title {
         font-size: 1rem;
-        color: #94A3B8;
-        font-weight: 500;
+        color: #94a3b8;
         margin-bottom: 0.5rem;
     }
     .metric-value {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 600;
-        color: #F8FAFC;
+        color: #f8fafc;
     }
 
     /* แท็บเมนู (Tabs) */
@@ -108,34 +97,34 @@ st.markdown("""
         height: 50px;
         padding: 0;
         font-size: 1.05rem;
-        color: #94A3B8;
+        color: #94a3b8;
         border: none;
         background: transparent;
     }
     .stTabs [aria-selected="true"] {
-        color: #F8FAFC !important;
-        border-bottom: 3px solid #10B981 !important;
+        color: #f8fafc !important;
+        border-bottom: 3px solid #059669 !important;
     }
 
-    /* ฟอร์มและกล่อง Input ให้มีมิติลอยขึ้น */
+    /* ฟอร์มและช่องกรอกข้อมูล (แก้ปัญหาสีกลืนกัน) */
     div[data-testid="stForm"] {
-        background-color: #1E293B;
+        background-color: #0f172a; /* สีพื้นหลังฟอร์ม (เข้มมาก) */
         border: 1px solid #334155;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 2rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stDateInput>div>div>input, .stSelectbox>div>div>div, .stTextArea>div>div>textarea {
-        background-color: #0F172A !important;
+    
+    /* ช่อง Input ให้สีสว่างกว่าพื้นหลังฟอร์มชัดเจน */
+    input, textarea, div[data-baseweb="select"] > div {
+        background-color: #1e293b !important; 
         border: 1px solid #475569 !important;
         border-radius: 6px !important;
-        color: #F8FAFC !important;
-        font-size: 1rem;
-        padding: 0.5rem;
+        color: #f8fafc !important;
+        padding: 0.5rem !important;
     }
-    .stTextInput>div>div>input:focus, .stSelectbox>div>div>div:focus {
-        border-color: #10B981 !important;
-        box-shadow: 0 0 0 1px #10B981 !important;
+    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus {
+        border-color: #059669 !important;
+        box-shadow: 0 0 0 1px #059669 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -257,26 +246,26 @@ def delete_record_modal(record_id, task_title):
             st.rerun()
 
 # -------------------------------------------------------------
-# โหลดข้อมูล
+# โหลดข้อมูล และจัด Layout Header ให้เรียบร้อย
 # -------------------------------------------------------------
 hospital_name = db.get_hospital_name()
 BRANCH_LIST = db.get_branches()
 
-col_header, col_branch = st.columns([3, 1])
+st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.5rem;'>{hospital_name}</h1>", unsafe_allow_html=True)
 
-with col_branch:
-    selected_branch = st.selectbox(
-        "เลือกสาขาที่ปฏิบัติงาน",
-        options=BRANCH_LIST,
-        key="branch_selector",
-        label_visibility="collapsed"
-    )
+# จัดวางกล่องเลือกสาขาและปุ่มตั้งค่าให้อยู่ชิดซ้ายและเป็นระเบียบ
+col_h1, col_h2, col_h3 = st.columns([3, 2, 5])
+with col_h1:
+    selected_branch = st.selectbox("พื้นที่ปฏิบัติงาน", options=BRANCH_LIST, key="branch_selector")
+with col_h2:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     if st.button("ตั้งค่าระบบ", use_container_width=True):
         manage_org_modal(hospital_name, BRANCH_LIST, selected_branch)
 
-with col_header:
-    st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.2rem;'>{hospital_name}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color: #94A3B8; font-size: 1rem;'>พื้นที่ปฏิบัติงาน: {selected_branch}</p>", unsafe_allow_html=True)
+# แสดงแจ้งเตือน (แทนที่ Toast มุมจอ) ให้เด้งตรงกลางใต้ Header เลย
+if "success_msg" in st.session_state:
+    st.success(st.session_state["success_msg"])
+    del st.session_state["success_msg"]
 
 df_equipments, df_records = db.get_branch_data_cached(selected_branch)
 
@@ -325,7 +314,7 @@ with tab_overview:
 
     st.markdown(f"""
     <div class="metric-container">
-        <div class="metric-card card-success">
+        <div class="metric-card">
             <div class="metric-title">เครื่องจักรทั้งหมด</div>
             <div class="metric-value">{total_eq}</div>
         </div>
@@ -333,11 +322,11 @@ with tab_overview:
             <div class="metric-title">ประวัติการตรวจสอบ</div>
             <div class="metric-value">{total_services}</div>
         </div>
-        <div class="metric-card card-warning">
+        <div class="metric-card">
             <div class="metric-title" style="color:#F59E0B;">ใกล้ครบกำหนด</div>
             <div class="metric-value">{warning_cnt}</div>
         </div>
-        <div class="metric-card card-danger">
+        <div class="metric-card">
             <div class="metric-title" style="color:#EF4444;">เลยกำหนด</div>
             <div class="metric-value">{overdue_cnt}</div>
         </div>
@@ -365,22 +354,34 @@ with tab_overview:
         st.dataframe(filtered_df, hide_index=True, use_container_width=True)
 
 # =============================================================
-# TAB 2: ทะเบียนเครื่องจักร
+# TAB 2: ทะเบียนเครื่องจักร (แก้บั๊กช่องพิมพ์ไม่ได้)
 # =============================================================
 with tab_manage:
-    st.markdown("<h3 style='font-size:1.3rem; margin-bottom:1.5rem;'>ลงทะเบียนเครื่องจักรใหม่</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลงทะเบียนเครื่องจักรใหม่</h3>", unsafe_allow_html=True)
     
     default_types = ["Autoclave", "ETO", "Plasma Sterilizer", "Washer Disinfector"]
     existing_types = [t for t in df_equipments["type"].unique() if t not in default_types] if not df_equipments.empty else []
     all_type_options = default_types + existing_types + ["ระบุประเภทอื่น..."]
 
+    # 1. ย้ายกล่องเลือกประเภทเครื่องออกมา "นอกฟอร์ม" เพื่อให้พิมพ์โต้ตอบได้ทันที
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        selected_type = st.selectbox("ประเภทเครื่อง", options=all_type_options)
+    
+    # ถ้ากดเลือก "ระบุประเภทอื่น..." ช่องข้อความด้านขวาจะโผล่ขึ้นมาทันที!
+    if selected_type == "ระบุประเภทอื่น...":
+        with col_t2:
+            custom_type = st.text_input("พิมพ์ชื่อประเภทเครื่องใหม่")
+    else:
+        custom_type = selected_type
+
+    # 2. ฟอร์มรายละเอียดที่เหลือ
     with st.form("add_equipment_form", clear_on_submit=True):
+        st.markdown("<p style='font-weight:600; margin-bottom:1rem; color:#94A3B8;'>รายละเอียดเครื่องจักร</p>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
             new_code = st.text_input("รหัสอุปกรณ์ *")
             new_name = st.text_input("ชื่ออุปกรณ์ *")
-            selected_type = st.selectbox("ประเภทเครื่อง *", options=all_type_options)
-            custom_type = st.text_input("ระบุประเภท (กรณีเลือก 'ระบุประเภทอื่น...')")
         with c2:
             new_brand = st.text_input("ยี่ห้อ / รุ่น")
             new_loc = st.text_input("แผนก / จุดติดตั้ง")
@@ -392,7 +393,7 @@ with tab_manage:
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
-            final_type = custom_type.strip() if selected_type == "ระบุประเภทอื่น..." else selected_type
+            final_type = custom_type.strip()
             if not new_code.strip() or not new_name.strip() or not final_type:
                 st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
@@ -411,7 +412,7 @@ with tab_manage:
                     st.error(str(e))
 
     if not df_equipments.empty:
-        st.markdown("<br><h3 style='font-size:1.3rem; margin-bottom:1rem;'>ลบข้อมูลเครื่องจักร</h3>", unsafe_allow_html=True)
+        st.markdown("<br><h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลบข้อมูลเครื่องจักร</h3>", unsafe_allow_html=True)
         del_options = {f"[{r['equipment_code']}] {r['name']}": r['id'] for _, r in df_equipments.iterrows()}
         c_del1, c_del2 = st.columns([3, 1])
         with c_del1:
@@ -426,7 +427,7 @@ with tab_manage:
 # TAB 3: บันทึกผล PM / Calibration
 # =============================================================
 with tab_log:
-    st.markdown("<h3 style='font-size:1.3rem; margin-bottom:1.5rem;'>บันทึกประวัติการตรวจสอบ</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>บันทึกประวัติการตรวจสอบ</h3>", unsafe_allow_html=True)
     if df_equipments.empty:
         st.info("ไม่พบข้อมูลเครื่องจักรในสาขานี้")
     else:
@@ -461,7 +462,7 @@ with tab_log:
 # TAB 4: ประวัติและแก้ไข
 # =============================================================
 with tab_history:
-    st.markdown("<h3 style='font-size:1.3rem; margin-bottom:1rem;'>ค้นหาและแก้ไขประวัติ</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ค้นหาและแก้ไขประวัติ</h3>", unsafe_allow_html=True)
     if df_equipments.empty:
         st.info("ไม่พบข้อมูล")
     else:
@@ -497,7 +498,7 @@ with tab_history:
 # TAB 5: คำนวณรอบล่วงหน้า
 # =============================================================
 with tab_calc:
-    st.markdown("<h3 style='font-size:1.3rem; margin-bottom:1.5rem;'>ระบบจำลองการคำนวณรอบ</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1.5rem;'>ระบบจำลองการคำนวณรอบ</h3>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         base_date = st.date_input("วันที่เริ่มต้น")
