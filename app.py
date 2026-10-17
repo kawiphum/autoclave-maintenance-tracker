@@ -23,7 +23,7 @@ st.markdown("""
 
     #MainMenu, footer, header {visibility: hidden;}
 
-    /* สีปุ่มหลัก (Primary Button) เปลี่ยนจากแดงเป็นเขียวมินิมอลแบบ Supabase */
+    /* สีปุ่มหลัก (Primary Button) */
     .stButton>button[kind="primary"] {
         background-color: #24b47e !important;
         color: white !important;
@@ -239,10 +239,7 @@ BRANCH_LIST = db.get_branches()
 
 col_header, col_branch = st.columns([3, 1])
 
-with col_header:
-    st.markdown(f"<h1 style='font-size: 1.5rem; margin-bottom: 0;'>{hospital_name}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color: #8c8c8c; font-size: 0.9rem;'>พื้นที่ปฏิบัติงาน: {selected_branch if 'branch_selector' not in st.session_state else st.session_state['branch_selector']}</p>", unsafe_allow_html=True)
-
+# สลับลำดับให้ col_branch ทำงานก่อนเพื่อสร้างตัวแปร selected_branch
 with col_branch:
     selected_branch = st.selectbox(
         "เลือกสาขา",
@@ -252,6 +249,11 @@ with col_branch:
     )
     if st.button("ตั้งค่าระบบ", use_container_width=True):
         manage_org_modal(hospital_name, BRANCH_LIST, selected_branch)
+
+# ค่อยนำ selected_branch มาแสดงผลใน col_header
+with col_header:
+    st.markdown(f"<h1 style='font-size: 1.5rem; margin-bottom: 0;'>{hospital_name}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: #8c8c8c; font-size: 0.9rem;'>พื้นที่ปฏิบัติงาน: {selected_branch}</p>", unsafe_allow_html=True)
 
 df_equipments, df_records = db.get_branch_data_cached(selected_branch)
 
@@ -340,7 +342,7 @@ with tab_overview:
         st.dataframe(filtered_df, hide_index=True, use_container_width=True)
 
 # =============================================================
-# TAB 2: ทะเบียนเครื่องจักร (ย้ายมาแท็บ 2 ให้จัดการง่ายขึ้น)
+# TAB 2: ทะเบียนเครื่องจักร
 # =============================================================
 with tab_manage:
     st.markdown("<h3 style='font-size:1.1rem; margin-bottom:1rem;'>ลงทะเบียนเครื่องจักรใหม่</h3>", unsafe_allow_html=True)
