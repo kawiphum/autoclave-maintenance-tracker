@@ -442,11 +442,34 @@ with tab_log:
                 remarks = st.text_area("หมายเหตุ")
 
             st.markdown("<br>", unsafe_allow_html=True)
-           if st.form_submit_button("บันทึกประวัติ", type="primary"):
+          # =============================================================
+# TAB 3: บันทึกผล PM / Calibration
+# =============================================================
+with tab_log:
+    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>บันทึกประวัติการตรวจสอบ</h3>", unsafe_allow_html=True)
+    if df_equipments.empty:
+        st.info("ไม่พบข้อมูลเครื่องจักรในสาขานี้")
+    else:
+        eq_options = {f"[{row['equipment_code']}] {row['name']}": row['id'] for _, row in df_equipments.iterrows()}
+        
+        with st.form("service_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_label = st.selectbox("อุปกรณ์ *", list(eq_options.keys()))
+                task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
+                service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
+            
+            with col2:
+                technician = st.text_input("ผู้ดำเนินการ *")
+                result = st.selectbox("ผลการตรวจสอบ *", ["Passed", "Passed with Condition", "Failed"])
+                remarks = st.text_area("หมายเหตุ")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.form_submit_button("บันทึกประวัติ", type="primary"):
                 if not technician.strip():
                     st.error("กรุณาระบุผู้ดำเนินการ")
                 else:
-                    # 🛑 เพิ่ม Spinner ตรงนี้
+                    # เพิ่ม Spinner แจ้งสถานะการโหลดตรงนี้
                     with st.spinner("⏳ กำลังบันทึกประวัติและคำนวณรอบถัดไป..."):
                         eq_id = int(eq_options[selected_label])
                         if db.check_duplicate_service(eq_id, task_type, str(service_date)):
