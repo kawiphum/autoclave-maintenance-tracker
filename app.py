@@ -31,7 +31,7 @@ st.markdown("""
         font-family: 'Prompt', sans-serif !important;
     }
 
-    /* จุดที่แก้ไข: เจาะจงซ่อนเฉพาะแถบด้านบนสุดของเว็บ ไม่ให้กระทบปฏิทิน */
+    /* ซ่อนเฉพาะ Header หลักของเว็บ ไม่ให้กระทบปฏิทิน */
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
     button[kind="primary"] {
@@ -138,7 +138,7 @@ def calculate_status(due_date_str):
         else:
             return f"ปกติ ({days_left} วัน)", 100, "normal"
     except Exception:
-        return "ไม่พบข้อมูล", 0, "none"
+        return "ข้อมูลไม่ถูกต้อง", 0, "none"
 
 # -------------------------------------------------------------
 # Pop-up Dialogs
@@ -261,7 +261,6 @@ with noti_container:
         st.success(st.session_state["success_msg"])
         del st.session_state["success_msg"]
     else:
-        # ใส่กล่องล่องหนไว้จองพื้นที่ตอนที่ไม่มีข้อความ
         st.markdown("<div style='height: 0px;'></div>", unsafe_allow_html=True)
 
 df_equipments, df_records = db.get_branch_data_cached(selected_branch)
@@ -311,21 +310,21 @@ with tab_overview:
 
     st.markdown(f"""
     <div class="metric-container">
-        <div class="metric-card card-success">
+        <div class="metric-card">
             <div class="metric-title">เครื่องจักรทั้งหมด</div>
-            <div class="metric-value">{total_eq}</div>
+            <div class="metric-value" style="color:#10B981;">{total_eq}</div>
         </div>
         <div class="metric-card">
             <div class="metric-title">ประวัติการตรวจสอบ</div>
-            <div class="metric-value">{total_services}</div>
+            <div class="metric-value" style="color:#3B82F6;">{total_services}</div>
         </div>
-        <div class="metric-card card-warning">
-            <div class="metric-title" style="color:#F59E0B;">ใกล้ครบกำหนด</div>
-            <div class="metric-value">{warning_cnt}</div>
+        <div class="metric-card">
+            <div class="metric-title">ใกล้ครบกำหนด</div>
+            <div class="metric-value" style="color:#F59E0B;">{warning_cnt}</div>
         </div>
-        <div class="metric-card card-danger">
-            <div class="metric-title" style="color:#EF4444;">เลยกำหนด</div>
-            <div class="metric-value">{overdue_cnt}</div>
+        <div class="metric-card">
+            <div class="metric-title">เลยกำหนด</div>
+            <div class="metric-value" style="color:#EF4444;">{overdue_cnt}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -362,11 +361,11 @@ with tab_manage:
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        selected_type = st.selectbox("ประเภทเครื่อง", options=all_type_options)
+        selected_type = st.selectbox("ประเภทเครื่อง", options=all_type_options, key="manage_type_sel")
     
     if selected_type == "ระบุประเภทอื่น...":
         with col_t2:
-            custom_type = st.text_input("พิมพ์ชื่อประเภทเครื่องใหม่")
+            custom_type = st.text_input("พิมพ์ชื่อประเภทเครื่องใหม่", key="manage_type_custom")
     else:
         custom_type = selected_type
 
@@ -386,13 +385,11 @@ with tab_manage:
             last_cal = st.date_input("วันที่ Calibrate ล่าสุด (ถ้ามี)", value=None)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        # ตรวจสอบให้แน่ใจว่าปุ่มนี้อยู่ภายใต้ with st.form
         if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
             final_type = custom_type.strip()
             if not new_code.strip() or not new_name.strip() or not final_type:
                 st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
-                # เพิ่ม Spinner ตอนบันทึกข้อมูลเครื่องจักร
                 with st.spinner("⏳ กำลังบันทึกข้อมูลลงระบบ กรุณารอสักครู่..."):
                     try:
                         db.add_equipment(
@@ -413,7 +410,7 @@ with tab_manage:
         del_options = {f"[{r['equipment_code']}] {r['name']}": r['id'] for _, r in df_equipments.iterrows()}
         c_del1, c_del2 = st.columns([3, 1])
         with c_del1:
-            selected_del = st.selectbox("เลือกอุปกรณ์", list(del_options.keys()), label_visibility="collapsed")
+            selected_del = st.selectbox("เลือกอุปกรณ์", list(del_options.keys()), label_visibility="collapsed", key="manage_del_sel")
         with c_del2:
             if st.button("ลบข้อมูล", type="secondary", use_container_width=True):
                 db.delete_equipment(int(del_options[selected_del]))
@@ -433,30 +430,7 @@ with tab_log:
         with st.form("service_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
-                selected_label = st.selectbox("อุปกรณ์ *", list(eq_options.keys()))
-                task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
-                service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
-            
-            with col2:
-                technician = st.text_input("ผู้ดำเนินการ *")
-                result = st.selectbox("ผลการตรวจสอบ *", ["Passed", "Passed with Condition", "Failed"])
-                remarks = st.text_area("หมายเหตุ")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-          # =============================================================
-# TAB 3: บันทึกผล PM / Calibration
-# =============================================================
-with tab_log:
-    st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>บันทึกประวัติการตรวจสอบ</h3>", unsafe_allow_html=True)
-    if df_equipments.empty:
-        st.info("ไม่พบข้อมูลเครื่องจักรในสาขานี้")
-    else:
-        eq_options = {f"[{row['equipment_code']}] {row['name']}": row['id'] for _, row in df_equipments.iterrows()}
-        
-        with st.form("service_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                selected_label = st.selectbox("อุปกรณ์ *", list(eq_options.keys()))
+                selected_label = st.selectbox("อุปกรณ์ *", list(eq_options.keys()), key="log_eq_sel")
                 task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
                 service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
             
@@ -470,7 +444,6 @@ with tab_log:
                 if not technician.strip():
                     st.error("กรุณาระบุผู้ดำเนินการ")
                 else:
-                    # เพิ่ม Spinner แจ้งสถานะการโหลดตรงนี้
                     with st.spinner("⏳ กำลังบันทึกประวัติและคำนวณรอบถัดไป..."):
                         eq_id = int(eq_options[selected_label])
                         if db.check_duplicate_service(eq_id, task_type, str(service_date)):
@@ -489,7 +462,7 @@ with tab_history:
         st.info("ไม่พบข้อมูล")
     else:
         eq_map = {f"[{r['equipment_code']}] {r['name']}": r['id'] for _, r in df_equipments.iterrows()}
-        selected_history_eq = st.selectbox("ค้นหาประวัติอุปกรณ์", list(eq_map.keys()), label_visibility="collapsed")
+        selected_history_eq = st.selectbox("ค้นหาประวัติอุปกรณ์", list(eq_map.keys()), label_visibility="collapsed", key="history_eq_sel")
         
         selected_id = int(eq_map[selected_history_eq])
         eq_records = df_records[df_records["equipment_id"] == selected_id] if not df_records.empty else pd.DataFrame()
@@ -497,7 +470,6 @@ with tab_history:
         if eq_records.empty:
             st.info("ไม่มีประวัติการดำเนินการ")
         else:
-            # --- ส่วนที่เพิ่มใหม่: คำนวณและแสดงยอดรวมสะสม ---
             total_pm = len(eq_records[eq_records["task_type"] == "PM"])
             total_cal = len(eq_records[eq_records["task_type"] == "Calibration"])
 
@@ -513,18 +485,11 @@ with tab_history:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            # ------------------------------------------------
 
-            # 1. คัดลอกข้อมูล
             display_records = eq_records.copy()
-            
-            # 2. จัดเรียงเอาวันที่ทำล่าสุดขึ้นก่อน
             display_records = display_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
-            
-            # 3. รันเลข "ลำดับ" 1, 2, 3... จากบนลงล่าง
             display_records.insert(0, 'ลำดับ', range(1, len(display_records) + 1))
             
-            # 4. นำไปแสดงผล
             st.dataframe(
                 display_records[["ลำดับ", "task_type", "service_date", "technician", "result", "remarks"]],
                 hide_index=True,
@@ -535,7 +500,7 @@ with tab_history:
             rec_options = {f"{r['service_date']} | {r['task_type']} | {r['result']}": r for _, r in eq_records.iterrows()}
             c_rec1, c_rec2, c_rec3 = st.columns([2, 1, 1])
             with c_rec1:
-                rec_choice = st.selectbox("เลือกรายการ", list(rec_options.keys()), label_visibility="collapsed")
+                rec_choice = st.selectbox("เลือกรายการ", list(rec_options.keys()), label_visibility="collapsed", key="history_rec_sel")
                 target_record = rec_options[rec_choice]
             with c_rec2:
                 if st.button("แก้ไขรายการ", type="primary", use_container_width=True):
