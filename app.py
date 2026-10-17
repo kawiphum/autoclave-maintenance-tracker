@@ -137,7 +137,7 @@ def calculate_status(due_date_str):
         else:
             return f"ปกติ ({days_left} วัน)", 100, "normal"
     except Exception:
-        return "ข้อมูลไม่ถูกต้อง", 0, "none"
+        return "ไม่พบข้อมูล", 0, "none"
 
 # -------------------------------------------------------------
 # Pop-up Dialogs
