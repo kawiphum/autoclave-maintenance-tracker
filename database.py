@@ -5,18 +5,15 @@ from dateutil.relativedelta import relativedelta
 
 # ฟังก์ชันค้นหา Database URL อัตโนมัติจาก st.secrets ทุกรูปแบบ
 def get_db_url():
-    # 1. ลองหาจากชื่อคีย์ยอดนิยมโดยตรง
     for key in ["DATABASE_URL", "database_url", "DB_URL", "db_url", "SUPABASE_DB_URL", "url", "uri"]:
         if key in st.secrets and isinstance(st.secrets[key], str):
             return st.secrets[key]
     
-    # 2. ลองหาจากโครงสร้างระดับที่สอง เช่น [connections.postgresql] หรือ [database]
     for section in st.secrets.values():
         if isinstance(section, dict):
             for key in ["url", "uri", "DATABASE_URL", "database_url", "db_url"]:
                 if key in section and isinstance(section[key], str):
                     return section[key]
-            # กรณีแยกเก็บเป็น host, user, password, dbname
             if "host" in section and "password" in section:
                 user = section.get("user", section.get("username", "postgres"))
                 pw = section.get("password")
@@ -25,7 +22,6 @@ def get_db_url():
                 dbname = section.get("dbname", section.get("database", "postgres"))
                 return f"postgresql://{user}:{pw}@{host}:{port}/{dbname}"
 
-    # 3. กวาดหาข้อความใดๆ ใน secrets ที่ขึ้นต้นด้วย postgres:// หรือ postgresql://
     def find_pg_string(d):
         for v in d.values():
             if isinstance(v, str) and (v.startswith("postgres://") or v.startswith("postgresql://")):
@@ -40,11 +36,9 @@ def get_db_url():
     if found_url:
         return found_url
 
-    # หากยังหาไม่เจอเลย แสดงว่ายังไม่ได้ใส่ค่าในเมนู Secrets ของแอปนี้
     st.error("⚠️ ไม่พบข้อมูลเชื่อมต่อฐานข้อมูลใน Streamlit Secrets! กรุณาตรวจสอบการตั้งค่า Secrets ของแอป")
     st.stop()
 
-# สร้าง Engine เชื่อมต่อฐานข้อมูล
 @st.cache_resource
 def get_engine():
     db_url = get_db_url().strip()
@@ -57,10 +51,31 @@ def get_connection():
     return engine.connect()
 
 def init_db():
-    """สร้างตารางและอัปเกรดโครงสร้างฐานข้อมูลให้รองรับระบบแยกสาขาอัตโนมัติ"""
+    """สร้างตารางและอัปเกรดโครงสร้างฐานข้อมูล รองรับการเปลี่ยนชื่อ รพ. และสาขา"""
     conn = get_connection()
     try:
-        # 1. สร้างตาราง equipments (กรณีเพิ่งสร้างใหม่)
+        # 1. ตารางตั้งค่าระบบ (เก็บชื่อโรงพยาบาล)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS app_settings (
+                setting_key TEXT PRIMARY KEY,
+                setting_value TEXT NOT NULL
+            );
+        """))
+        conn.execute(text("""
+            INSERT INTO app_settings (setting_key, setting_value)
+            VALUES ('hospital_name', 'ระบบติดตามรอบบำรุงรักษาเครื่องมือแพทย์')
+            ON CONFLICT (setting_key) DO NOTHING;
+        """))
+
+        # 2. ตารางรายชื่อสาขา
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS branches (
+                id SERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            );
+        """))
+
+        # 3. ตาราง equipments
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS equipments (
                 id SERIAL PRIMARY KEY,
@@ -79,20 +94,23 @@ def init_db():
             );
         """))
 
-        # 2. อัปเกรดตารางเดิม: เพิ่มคอลัมน์ branch หากยังไม่มี และย้ายข้อมูลเก่าเข้า 'สาขา A'
+        conn.execute(text("ALTER TABLE equipments ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'สาขา A';"))
+        conn.execute(text("UPDATE equipments SET branch = 'สาขา A' WHERE branch IS NULL OR branch = '';"))
+        conn.execute(text("ALTER TABLE equipments DROP CONSTRAINT IF EXISTS equipments_equipment_code_key;"))
+
+        # ถ้ายิ่งเปิดครั้งแรกและตาราง branches ว่างเปล่า ให้ใส่สาขาเริ่มต้น + ดึงสาขาที่มีใน equipments มาใส่
+        branch_cnt = conn.execute(text("SELECT COUNT(*) FROM branches")).scalar()
+        if branch_cnt == 0:
+            for b in ["สาขา A", "สาขา B", "สาขา C"]:
+                conn.execute(text("INSERT INTO branches (name) VALUES (:name) ON CONFLICT DO NOTHING"), {"name": b})
+        
         conn.execute(text("""
-            ALTER TABLE equipments ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'สาขา A';
-        """))
-        conn.execute(text("""
-            UPDATE equipments SET branch = 'สาขา A' WHERE branch IS NULL OR branch = '';
+            INSERT INTO branches (name)
+            SELECT DISTINCT branch FROM equipments WHERE branch IS NOT NULL AND branch != ''
+            ON CONFLICT DO NOTHING;
         """))
 
-        # 3. ปลดล็อกให้ต่างสาขาใช้รหัสเครื่อง (equipment_code) ซ้ำกันได้
-        conn.execute(text("""
-            ALTER TABLE equipments DROP CONSTRAINT IF EXISTS equipments_equipment_code_key;
-        """))
-
-        # 4. สร้างตาราง service_records
+        # 4. ตาราง service_records
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS service_records (
                 id SERIAL PRIMARY KEY,
@@ -111,13 +129,87 @@ def init_db():
     finally:
         conn.close()
 
-# เรียกทำงานอัตโนมัติเมื่อเปิดแอป
 init_db()
 
+# -------------------------------------------------------------
+# ฟังก์ชันจัดการชื่อโรงพยาบาล และ สาขา
+# -------------------------------------------------------------
+def get_hospital_name():
+    conn = get_connection()
+    try:
+        res = conn.execute(text("SELECT setting_value FROM app_settings WHERE setting_key = 'hospital_name'")).fetchone()
+        return res[0] if res else "ระบบติดตามรอบบำรุงรักษาเครื่องมือแพทย์"
+    finally:
+        conn.close()
+
+def update_hospital_name(new_name):
+    conn = get_connection()
+    try:
+        conn.execute(text("""
+            INSERT INTO app_settings (setting_key, setting_value)
+            VALUES ('hospital_name', :val)
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = :val
+        """), {"val": new_name})
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_branches():
+    conn = get_connection()
+    try:
+        rows = conn.execute(text("SELECT name FROM branches ORDER BY id ASC")).fetchall()
+        return [r[0] for r in rows] if rows else ["สาขา A"]
+    finally:
+        conn.close()
+
+def add_branch(branch_name):
+    conn = get_connection()
+    try:
+        dup = conn.execute(text("SELECT id FROM branches WHERE name = :name"), {"name": branch_name}).fetchone()
+        if dup:
+            raise ValueError(f"มีสาขาชื่อ '{branch_name}' อยู่ในระบบแล้ว")
+        conn.execute(text("INSERT INTO branches (name) VALUES (:name)"), {"name": branch_name})
+        conn.commit()
+    finally:
+        conn.close()
+
+def rename_branch(old_name, new_name):
+    conn = get_connection()
+    try:
+        dup = conn.execute(text("SELECT id FROM branches WHERE name = :name"), {"name": new_name}).fetchone()
+        if dup:
+            raise ValueError(f"มีสาขาชื่อ '{new_name}' อยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น")
+        conn.execute(text("UPDATE branches SET name = :new WHERE name = :old"), {"new": new_name, "old": old_name})
+        conn.execute(text("UPDATE equipments SET branch = :new WHERE branch = :old"), {"new": new_name, "old": old_name})
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_branch(branch_name):
+    conn = get_connection()
+    try:
+        cnt = conn.execute(text("SELECT COUNT(*) FROM branches")).scalar()
+        if cnt <= 1:
+            raise ValueError("ไม่สามารถลบได้ ระบบต้องมีอย่างน้อย 1 สาขา")
+        
+        # ลบประวัติและเครื่องจักรของสาขานี้
+        conn.execute(text("""
+            DELETE FROM service_records WHERE equipment_id IN (
+                SELECT id FROM equipments WHERE branch = :b
+            )
+        """), {"b": branch_name})
+        conn.execute(text("DELETE FROM equipments WHERE branch = :b"), {"b": branch_name})
+        conn.execute(text("DELETE FROM branches WHERE name = :b"), {"b": branch_name})
+        conn.commit()
+    finally:
+        conn.close()
+
+# -------------------------------------------------------------
+# ฟังก์ชันจัดการเครื่องจักรและประวัติ
+# -------------------------------------------------------------
 def add_equipment(code, name, eq_type, brand, location, pm_freq, cal_freq, last_pm, last_cal, branch="สาขา A"):
     conn = get_connection()
     try:
-        # เช็กว่าในสาขาเดียวกันมีรหัสเครื่องนี้หรือยัง
         check_q = text("SELECT id FROM equipments WHERE equipment_code = :code AND branch = :branch")
         dup = conn.execute(check_q, {"code": code, "branch": branch}).fetchone()
         if dup:
@@ -169,13 +261,11 @@ def check_duplicate_service(eq_id, task_type, service_date):
         conn.close()
 
 def recalculate_equipment_dates(conn, eq_id):
-    """คำนวณวันตรวจล่าสุดและรอบถัดไปของเครื่องจักรใหม่จากประวัติทั้งหมด"""
     eq = conn.execute(text("SELECT pm_freq_months, cal_freq_months FROM equipments WHERE id = :id"), {"id": eq_id}).fetchone()
     if not eq:
         return
     pm_freq, cal_freq = eq[0], eq[1]
 
-    # หาประวัติ PM ล่าสุด
     latest_pm = conn.execute(text("""
         SELECT service_date FROM service_records 
         WHERE equipment_id = :id AND task_type = 'PM' 
@@ -189,7 +279,6 @@ def recalculate_equipment_dates(conn, eq_id):
     else:
         l_pm, n_pm = None, None
 
-    # หาประวัติ Calibration ล่าสุด
     latest_cal = conn.execute(text("""
         SELECT service_date FROM service_records 
         WHERE equipment_id = :id AND task_type = 'Calibration' 
