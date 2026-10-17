@@ -386,12 +386,13 @@ with tab_manage:
             last_cal = st.date_input("วันที่ Calibrate ล่าสุด (ถ้ามี)", value=None)
 
         st.markdown("<br>", unsafe_allow_html=True)
-    if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
+        # ตรวจสอบให้แน่ใจว่าปุ่มนี้อยู่ภายใต้ with st.form
+        if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
             final_type = custom_type.strip()
             if not new_code.strip() or not new_name.strip() or not final_type:
                 st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
-                # 🛑 เพิ่ม Spinner ตรงนี้
+                # เพิ่ม Spinner ตอนบันทึกข้อมูลเครื่องจักร
                 with st.spinner("⏳ กำลังบันทึกข้อมูลลงระบบ กรุณารอสักครู่..."):
                     try:
                         db.add_equipment(
