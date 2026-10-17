@@ -254,9 +254,15 @@ with col_h2:
     if st.button("ตั้งค่าระบบ", use_container_width=True):
         manage_org_modal(hospital_name, BRANCH_LIST, selected_branch)
 
-if "success_msg" in st.session_state:
-    st.success(st.session_state["success_msg"])
-    del st.session_state["success_msg"]
+# จองพื้นที่คงที่สำหรับกล่องแจ้งเตือน (ป้องกันโครงสร้างเว็บขยับจนแท็บรีเซ็ต)
+noti_container = st.container()
+with noti_container:
+    if "success_msg" in st.session_state:
+        st.success(st.session_state["success_msg"])
+        del st.session_state["success_msg"]
+    else:
+        # ใส่กล่องล่องหนไว้จองพื้นที่ตอนที่ไม่มีข้อความ
+        st.markdown("<div style='height: 0px;'></div>", unsafe_allow_html=True)
 
 df_equipments, df_records = db.get_branch_data_cached(selected_branch)
 
@@ -380,24 +386,26 @@ with tab_manage:
             last_cal = st.date_input("วันที่ Calibrate ล่าสุด (ถ้ามี)", value=None)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
+    if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
             final_type = custom_type.strip()
             if not new_code.strip() or not new_name.strip() or not final_type:
                 st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
-                try:
-                    db.add_equipment(
-                        new_code.strip(), new_name.strip(), final_type,
-                        new_brand.strip(), new_loc.strip(),
-                        int(new_pm_freq), int(new_cal_freq),
-                        str(last_pm) if last_pm else None,
-                        str(last_cal) if last_cal else None,
-                        branch=selected_branch
-                    )
-                    trigger_notification("ลงทะเบียนเครื่องจักรเรียบร้อยแล้ว")
-                    st.rerun()
-                except Exception as e:
-                    st.error(str(e))
+                # 🛑 เพิ่ม Spinner ตรงนี้
+                with st.spinner("⏳ กำลังบันทึกข้อมูลลงระบบ กรุณารอสักครู่..."):
+                    try:
+                        db.add_equipment(
+                            new_code.strip(), new_name.strip(), final_type,
+                            new_brand.strip(), new_loc.strip(),
+                            int(new_pm_freq), int(new_cal_freq),
+                            str(last_pm) if last_pm else None,
+                            str(last_cal) if last_cal else None,
+                            branch=selected_branch
+                        )
+                        trigger_notification("ลงทะเบียนเครื่องจักรเรียบร้อยแล้ว")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
 
     if not df_equipments.empty:
         st.markdown("<br><h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลบข้อมูลเครื่องจักร</h3>", unsafe_allow_html=True)
@@ -434,17 +442,19 @@ with tab_log:
                 remarks = st.text_area("หมายเหตุ")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.form_submit_button("บันทึกประวัติ", type="primary"):
+           if st.form_submit_button("บันทึกประวัติ", type="primary"):
                 if not technician.strip():
                     st.error("กรุณาระบุผู้ดำเนินการ")
                 else:
-                    eq_id = int(eq_options[selected_label])
-                    if db.check_duplicate_service(eq_id, task_type, str(service_date)):
-                        st.warning("มีประวัติในระบบแล้ว")
-                    else:
-                        db.log_service(eq_id, task_type, str(service_date), technician.strip(), result, remarks.strip())
-                        trigger_notification("บันทึกประวัติและคำนวณรอบถัดไปสำเร็จ")
-                        st.rerun()
+                    # 🛑 เพิ่ม Spinner ตรงนี้
+                    with st.spinner("⏳ กำลังบันทึกประวัติและคำนวณรอบถัดไป..."):
+                        eq_id = int(eq_options[selected_label])
+                        if db.check_duplicate_service(eq_id, task_type, str(service_date)):
+                            st.warning("มีประวัติในระบบแล้ว")
+                        else:
+                            db.log_service(eq_id, task_type, str(service_date), technician.strip(), result, remarks.strip())
+                            trigger_notification("บันทึกประวัติและคำนวณรอบถัดไปสำเร็จ")
+                            st.rerun()
 
 # =============================================================
 # TAB 4: ประวัติและแก้ไข
