@@ -3,10 +3,51 @@ from sqlalchemy import create_engine, text
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+# ฟังก์ชันค้นหา Database URL อัตโนมัติจาก st.secrets ทุกรูปแบบ
+def get_db_url():
+    # 1. ลองหาจากชื่อคีย์ยอดนิยมโดยตรง
+    for key in ["DATABASE_URL", "database_url", "DB_URL", "db_url", "SUPABASE_DB_URL", "url", "uri"]:
+        if key in st.secrets and isinstance(st.secrets[key], str):
+            return st.secrets[key]
+    
+    # 2. ลองหาจากโครงสร้างระดับที่สอง เช่น [connections.postgresql] หรือ [database]
+    for section in st.secrets.values():
+        if isinstance(section, dict):
+            for key in ["url", "uri", "DATABASE_URL", "database_url", "db_url"]:
+                if key in section and isinstance(section[key], str):
+                    return section[key]
+            # กรณีแยกเก็บเป็น host, user, password, dbname
+            if "host" in section and "password" in section:
+                user = section.get("user", section.get("username", "postgres"))
+                pw = section.get("password")
+                host = section.get("host")
+                port = section.get("port", 5432)
+                dbname = section.get("dbname", section.get("database", "postgres"))
+                return f"postgresql://{user}:{pw}@{host}:{port}/{dbname}"
+
+    # 3. กวาดหาข้อความใดๆ ใน secrets ที่ขึ้นต้นด้วย postgres:// หรือ postgresql://
+    def find_pg_string(d):
+        for v in d.values():
+            if isinstance(v, str) and (v.startswith("postgres://") or v.startswith("postgresql://")):
+                return v
+            elif isinstance(v, dict):
+                res = find_pg_string(v)
+                if res:
+                    return res
+        return None
+
+    found_url = find_pg_string(st.secrets)
+    if found_url:
+        return found_url
+
+    # หากยังหาไม่เจอเลย แสดงว่ายังไม่ได้ใส่ค่าในเมนู Secrets ของแอปนี้
+    st.error("⚠️ ไม่พบข้อมูลเชื่อมต่อฐานข้อมูลใน Streamlit Secrets! กรุณาตรวจสอบการตั้งค่า Secrets ของแอป")
+    st.stop()
+
 # สร้าง Engine เชื่อมต่อฐานข้อมูล
 @st.cache_resource
 def get_engine():
-    db_url = st.secrets["DATABASE_URL"]
+    db_url = get_db_url().strip()
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     return create_engine(db_url, pool_pre_ping=True)
