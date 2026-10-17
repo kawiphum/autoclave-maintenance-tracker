@@ -446,7 +446,7 @@ with tab_log:
                         st.rerun()
 
 # =============================================================
-# TAB 4: ประวัติและแก้ไข (อัปเดตการเรียงลำดับใหม่)
+# TAB 4: ประวัติและแก้ไข
 # =============================================================
 with tab_history:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ค้นหาและแก้ไขประวัติ</h3>", unsafe_allow_html=True)
@@ -462,18 +462,16 @@ with tab_history:
         if eq_records.empty:
             st.info("ไม่มีประวัติการดำเนินการ")
         else:
-            # 1. คัดลอกข้อมูลและสร้างคอลัมน์ลำดับ 1, 2, 3...
+            # 1. คัดลอกข้อมูล
             display_records = eq_records.copy()
-            # จัดเรียงตามวันที่จากเก่าไปใหม่ (หรือใหม่ไปเก่า แล้วแต่ต้องการ)
-            # ในที่นี้เรียงจากวันที่ล่าสุด (เก่าไปใหม่)
-            display_records = display_records.sort_values(by="service_date", ascending=True).reset_index(drop=True)
-            # เพิ่มคอลัมน์ "ลำดับ" ให้เริ่มตั้งแต่ 1
+            
+            # 2. จัดเรียงเอาวันที่ทำล่าสุดขึ้นก่อน (ถ้าวันเดียวกัน ให้เอาที่เพิ่งบันทึกล่าสุดขึ้นก่อน)
+            display_records = display_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
+            
+            # 3. รันเลข "ลำดับ" 1, 2, 3... จากบนลงล่าง
             display_records.insert(0, 'ลำดับ', range(1, len(display_records) + 1))
             
-            # เรียงกลับให้แสดงอันใหม่สุดขึ้นก่อน
-            display_records = display_records.sort_values(by="service_date", ascending=False)
-            
-            # 2. นำไปแสดงผลใน st.dataframe โดยซ่อนคอลัมน์ id เดิม
+            # 4. นำไปแสดงผล
             st.dataframe(
                 display_records[["ลำดับ", "task_type", "service_date", "technician", "result", "remarks"]],
                 hide_index=True,
@@ -481,8 +479,6 @@ with tab_history:
             )
 
             st.markdown("<br><p style='font-size:1rem; color:#94A3B8; margin-bottom:0.5rem;'>จัดการข้อมูลประวัติ</p>", unsafe_allow_html=True)
-            
-            # ตัวเลือกสำหรับจัดการรายการ
             rec_options = {f"{r['service_date']} | {r['task_type']} | {r['result']}": r for _, r in eq_records.iterrows()}
             c_rec1, c_rec2, c_rec3 = st.columns([2, 1, 1])
             with c_rec1:
