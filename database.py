@@ -1,9 +1,9 @@
 import streamlit as st
+import pandas as pd
 from sqlalchemy import create_engine, text
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# ฟังก์ชันค้นหา Database URL อัตโนมัติจาก st.secrets ทุกรูปแบบ
 def get_db_url():
     for key in ["DATABASE_URL", "database_url", "DB_URL", "db_url", "SUPABASE_DB_URL", "url", "uri"]:
         if key in st.secrets and isinstance(st.secrets[key], str):
@@ -36,7 +36,7 @@ def get_db_url():
     if found_url:
         return found_url
 
-    st.error("⚠️ ไม่พบข้อมูลเชื่อมต่อฐานข้อมูลใน Streamlit Secrets! กรุณาตรวจสอบการตั้งค่า Secrets ของแอป")
+    st.error("⚠️ ไม่พบข้อมูลเชื่อมต่อฐานข้อมูลใน Streamlit Secrets!")
     st.stop()
 
 @st.cache_resource
@@ -44,17 +44,16 @@ def get_engine():
     db_url = get_db_url().strip()
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
-    return create_engine(db_url, pool_pre_ping=True)
+    return create_engine(db_url, pool_pre_ping=True, pool_size=5, max_overflow=10)
 
 def get_connection():
-    engine = get_engine()
-    return engine.connect()
+    return get_engine().connect()
 
+# รันคำสั่งสร้าง/ตรวจสอบตารางแค่ครั้งเดียวตอนเริ่มระบบ (ไม่รันซ้ำทุกครั้งที่กดปุ่ม)
+@st.cache_resource
 def init_db():
-    """สร้างตารางและอัปเกรดโครงสร้างฐานข้อมูล รองรับการเปลี่ยนชื่อ รพ. และสาขา"""
     conn = get_connection()
     try:
-        # 1. ตารางตั้งค่าระบบ (เก็บชื่อโรงพยาบาล)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key TEXT PRIMARY KEY,
@@ -66,16 +65,12 @@ def init_db():
             VALUES ('hospital_name', 'ระบบติดตามรอบบำรุงรักษาเครื่องมือแพทย์')
             ON CONFLICT (setting_key) DO NOTHING;
         """))
-
-        # 2. ตารางรายชื่อสาขา
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS branches (
                 id SERIAL PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL
             );
         """))
-
-        # 3. ตาราง equipments
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS equipments (
                 id SERIAL PRIMARY KEY,
@@ -93,12 +88,10 @@ def init_db():
                 branch TEXT DEFAULT 'สาขา A'
             );
         """))
-
         conn.execute(text("ALTER TABLE equipments ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'สาขา A';"))
         conn.execute(text("UPDATE equipments SET branch = 'สาขา A' WHERE branch IS NULL OR branch = '';"))
         conn.execute(text("ALTER TABLE equipments DROP CONSTRAINT IF EXISTS equipments_equipment_code_key;"))
 
-        # ถ้ายิ่งเปิดครั้งแรกและตาราง branches ว่างเปล่า ให้ใส่สาขาเริ่มต้น + ดึงสาขาที่มีใน equipments มาใส่
         branch_cnt = conn.execute(text("SELECT COUNT(*) FROM branches")).scalar()
         if branch_cnt == 0:
             for b in ["สาขา A", "สาขา B", "สาขา C"]:
@@ -110,7 +103,6 @@ def init_db():
             ON CONFLICT DO NOTHING;
         """))
 
-        # 4. ตาราง service_records
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS service_records (
                 id SERIAL PRIMARY KEY,
@@ -128,12 +120,14 @@ def init_db():
         print(f"DB Init Warning: {e}")
     finally:
         conn.close()
+    return True
 
 init_db()
 
 # -------------------------------------------------------------
-# ฟังก์ชันจัดการชื่อโรงพยาบาล และ สาขา
+# ฟังก์ชันดึงข้อมูลพร้อม Cache (ทำให้สลับหน้าและพิมพ์ได้เร็วขึ้นมาก)
 # -------------------------------------------------------------
+@st.cache_data(ttl=60, show_spinner=False)
 def get_hospital_name():
     conn = get_connection()
     try:
@@ -142,6 +136,41 @@ def get_hospital_name():
     finally:
         conn.close()
 
+@st.cache_data(ttl=60, show_spinner=False)
+def get_branches():
+    conn = get_connection()
+    try:
+        rows = conn.execute(text("SELECT name FROM branches ORDER BY id ASC")).fetchall()
+        return [r[0] for r in rows] if rows else ["สาขา A"]
+    finally:
+        conn.close()
+
+@st.cache_data(ttl=60, show_spinner=False)
+def get_branch_data_cached(selected_branch):
+    conn = get_connection()
+    try:
+        eq_query = text("SELECT * FROM equipments WHERE branch = :branch ORDER BY id ASC")
+        df_eq = pd.read_sql_query(eq_query, conn, params={"branch": selected_branch})
+        
+        rec_query = text("""
+            SELECT sr.* FROM service_records sr
+            JOIN equipments eq ON sr.equipment_id = eq.id
+            WHERE eq.branch = :branch
+            ORDER BY sr.service_date DESC
+        """)
+        df_rec = pd.read_sql_query(rec_query, conn, params={"branch": selected_branch})
+        return df_eq, df_rec
+    finally:
+        conn.close()
+
+def clear_all_caches():
+    get_hospital_name.clear()
+    get_branches.clear()
+    get_branch_data_cached.clear()
+
+# -------------------------------------------------------------
+# ฟังก์ชันบันทึกและแก้ไขข้อมูล (จะสั่งล้าง Cache เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูล)
+# -------------------------------------------------------------
 def update_hospital_name(new_name):
     conn = get_connection()
     try:
@@ -151,14 +180,7 @@ def update_hospital_name(new_name):
             ON CONFLICT (setting_key) DO UPDATE SET setting_value = :val
         """), {"val": new_name})
         conn.commit()
-    finally:
-        conn.close()
-
-def get_branches():
-    conn = get_connection()
-    try:
-        rows = conn.execute(text("SELECT name FROM branches ORDER BY id ASC")).fetchall()
-        return [r[0] for r in rows] if rows else ["สาขา A"]
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -170,6 +192,7 @@ def add_branch(branch_name):
             raise ValueError(f"มีสาขาชื่อ '{branch_name}' อยู่ในระบบแล้ว")
         conn.execute(text("INSERT INTO branches (name) VALUES (:name)"), {"name": branch_name})
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -182,6 +205,7 @@ def rename_branch(old_name, new_name):
         conn.execute(text("UPDATE branches SET name = :new WHERE name = :old"), {"new": new_name, "old": old_name})
         conn.execute(text("UPDATE equipments SET branch = :new WHERE branch = :old"), {"new": new_name, "old": old_name})
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -191,8 +215,6 @@ def delete_branch(branch_name):
         cnt = conn.execute(text("SELECT COUNT(*) FROM branches")).scalar()
         if cnt <= 1:
             raise ValueError("ไม่สามารถลบได้ ระบบต้องมีอย่างน้อย 1 สาขา")
-        
-        # ลบประวัติและเครื่องจักรของสาขานี้
         conn.execute(text("""
             DELETE FROM service_records WHERE equipment_id IN (
                 SELECT id FROM equipments WHERE branch = :b
@@ -201,12 +223,10 @@ def delete_branch(branch_name):
         conn.execute(text("DELETE FROM equipments WHERE branch = :b"), {"b": branch_name})
         conn.execute(text("DELETE FROM branches WHERE name = :b"), {"b": branch_name})
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
-# -------------------------------------------------------------
-# ฟังก์ชันจัดการเครื่องจักรและประวัติ
-# -------------------------------------------------------------
 def add_equipment(code, name, eq_type, brand, location, pm_freq, cal_freq, last_pm, last_cal, branch="สาขา A"):
     conn = get_connection()
     try:
@@ -215,15 +235,8 @@ def add_equipment(code, name, eq_type, brand, location, pm_freq, cal_freq, last_
         if dup:
             raise ValueError(f"รหัสเครื่อง '{code}' มีอยู่ใน {branch} แล้ว กรุณาใช้รหัสอื่น")
 
-        next_pm = None
-        if last_pm:
-            dt_pm = datetime.strptime(last_pm, "%Y-%m-%d").date()
-            next_pm = str(dt_pm + relativedelta(months=int(pm_freq)))
-
-        next_cal = None
-        if last_cal:
-            dt_cal = datetime.strptime(last_cal, "%Y-%m-%d").date()
-            next_cal = str(dt_cal + relativedelta(months=int(cal_freq)))
+        next_pm = str(datetime.strptime(last_pm, "%Y-%m-%d").date() + relativedelta(months=int(pm_freq))) if last_pm else None
+        next_cal = str(datetime.strptime(last_cal, "%Y-%m-%d").date() + relativedelta(months=int(cal_freq))) if last_cal else None
 
         insert_q = text("""
             INSERT INTO equipments 
@@ -236,6 +249,7 @@ def add_equipment(code, name, eq_type, brand, location, pm_freq, cal_freq, last_
             "l_cal": last_cal, "n_cal": next_cal, "branch": branch
         })
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -245,6 +259,7 @@ def delete_equipment(eq_id):
         conn.execute(text("DELETE FROM service_records WHERE equipment_id = :id"), {"id": eq_id})
         conn.execute(text("DELETE FROM equipments WHERE id = :id"), {"id": eq_id})
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -274,8 +289,7 @@ def recalculate_equipment_dates(conn, eq_id):
 
     if latest_pm and latest_pm[0]:
         l_pm = latest_pm[0]
-        dt_pm = datetime.strptime(l_pm, "%Y-%m-%d").date()
-        n_pm = str(dt_pm + relativedelta(months=int(pm_freq)))
+        n_pm = str(datetime.strptime(l_pm, "%Y-%m-%d").date() + relativedelta(months=int(pm_freq)))
     else:
         l_pm, n_pm = None, None
 
@@ -287,8 +301,7 @@ def recalculate_equipment_dates(conn, eq_id):
 
     if latest_cal and latest_cal[0]:
         l_cal = latest_cal[0]
-        dt_cal = datetime.strptime(l_cal, "%Y-%m-%d").date()
-        n_cal = str(dt_cal + relativedelta(months=int(cal_freq)))
+        n_cal = str(datetime.strptime(l_cal, "%Y-%m-%d").date() + relativedelta(months=int(cal_freq)))
     else:
         l_cal, n_cal = None, None
 
@@ -318,6 +331,7 @@ def log_service(eq_id, task_type, service_date, technician, result, remarks):
         
         recalculate_equipment_dates(conn, eq_id)
         conn.commit()
+        clear_all_caches()
         return next_due
     finally:
         conn.close()
@@ -344,6 +358,7 @@ def update_service_record(record_id, new_date, new_tech, new_res, new_rem):
 
         recalculate_equipment_dates(conn, eq_id)
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
 
@@ -358,5 +373,6 @@ def delete_service_record(record_id):
         if eq_id:
             recalculate_equipment_dates(conn, eq_id)
         conn.commit()
+        clear_all_caches()
     finally:
         conn.close()
