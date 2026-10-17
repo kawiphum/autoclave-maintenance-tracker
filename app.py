@@ -462,10 +462,28 @@ with tab_history:
         if eq_records.empty:
             st.info("ไม่มีประวัติการดำเนินการ")
         else:
+            # --- ส่วนที่เพิ่มใหม่: คำนวณและแสดงยอดรวมสะสม ---
+            total_pm = len(eq_records[eq_records["task_type"] == "PM"])
+            total_cal = len(eq_records[eq_records["task_type"] == "Calibration"])
+
+            st.markdown(f"""
+            <div style='display: flex; gap: 1rem; margin-bottom: 1.2rem;'>
+                <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
+                    <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม PM สะสม</div>
+                    <div style='color: #10B981; font-size: 1.5rem; font-weight: 600;'>{total_pm} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+                </div>
+                <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
+                    <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม Calibration สะสม</div>
+                    <div style='color: #3B82F6; font-size: 1.5rem; font-weight: 600;'>{total_cal} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            # ------------------------------------------------
+
             # 1. คัดลอกข้อมูล
             display_records = eq_records.copy()
             
-            # 2. จัดเรียงเอาวันที่ทำล่าสุดขึ้นก่อน (ถ้าวันเดียวกัน ให้เอาที่เพิ่งบันทึกล่าสุดขึ้นก่อน)
+            # 2. จัดเรียงเอาวันที่ทำล่าสุดขึ้นก่อน
             display_records = display_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
             
             # 3. รันเลข "ลำดับ" 1, 2, 3... จากบนลงล่าง
