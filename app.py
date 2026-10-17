@@ -14,11 +14,6 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# รายชื่อสาขา (สามารถเพิ่มหรือแก้ไขชื่อสาขาตรงนี้ได้เลย)
-# -------------------------------------------------------------
-BRANCH_LIST = ["สาขา A", "สาขา B", "สาขา C"]
-
-# -------------------------------------------------------------
 # 1. Custom CSS: ฟอนต์ Prompt และดีไซน์ UI สไตล์ Dashboard สมัยใหม่
 # -------------------------------------------------------------
 st.markdown("""
@@ -32,7 +27,6 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* กล่องเลือกสาขาเด่นชัด */
     .branch-badge {
         display: inline-block;
         padding: 0.35rem 0.85rem;
@@ -45,7 +39,6 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
 
-    /* ตกแต่ง Metric Cards */
     .metric-container {
         display: flex;
         gap: 1rem;
@@ -93,7 +86,6 @@ st.markdown("""
         margin-left: 0.3rem;
     }
 
-    /* ตกแต่ง Tabs ด้านบน */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         border-bottom: 1px solid #334155;
@@ -122,15 +114,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# ฟังก์ชันคำนวณและดึงข้อมูลแยกตามสาขา (Data Isolation 100%)
+# ฟังก์ชันคำนวณและดึงข้อมูลแยกตามสาขา
 # -------------------------------------------------------------
 def get_branch_data(selected_branch):
     conn = db.get_connection()
-    # ดึงเฉพาะเครื่องจักรของสาขาที่เลือกเท่านั้น
     eq_query = text("SELECT * FROM equipments WHERE branch = :branch ORDER BY id ASC")
     df_eq = pd.read_sql_query(eq_query, conn, params={"branch": selected_branch})
     
-    # ดึงเฉพาะประวัติของเครื่องจักรในสาขาที่เลือกเท่านั้น
     rec_query = text("""
         SELECT sr.* FROM service_records sr
         JOIN equipments eq ON sr.equipment_id = eq.id
@@ -162,6 +152,67 @@ def calculate_status(due_date_str):
 # -------------------------------------------------------------
 # Pop-up Dialogs (@st.dialog)
 # -------------------------------------------------------------
+@st.dialog("🏥 ตั้งค่าชื่อโรงพยาบาล และ จัดการสาขา")
+def manage_org_modal(current_hosp_name, branch_list, current_branch):
+    tab_h, tab_b = st.tabs(["🏥 ชื่อโรงพยาบาล / หัวเว็บ", "📍 จัดการชื่อสาขา"])
+    
+    # แท็บแก้ไขชื่อโรงพยาบาล
+    with tab_h:
+        new_hosp = st.text_input("ชื่อโรงพยาบาล หรือ ชื่อระบบ", value=current_hosp_name)
+        if st.button("💾 บันทึกชื่อโรงพยาบาล", type="primary", use_container_width=True):
+            if new_hosp.strip():
+                db.update_hospital_name(new_hosp.strip())
+                st.success("เปลี่ยนชื่อเรียบร้อยแล้ว!")
+                st.rerun()
+            else:
+                st.error("กรุณากรอกชื่อ")
+
+    # แท็บแก้ไขชื่อสาขา / เพิ่มสาขา / ลบสาขา
+    with tab_b:
+        st.markdown("##### ✏️ เปลี่ยนชื่อสาขา")
+        target_b = st.selectbox("เลือกสาขาที่ต้องการเปลี่ยนชื่อ:", branch_list, index=branch_list.index(current_branch) if current_branch in branch_list else 0)
+        new_b_name = st.text_input("พิมพ์ชื่อสาขาใหม่:", value=target_b)
+        if st.button("บันทึกการเปลี่ยนชื่อสาขา", type="primary", use_container_width=True):
+            if not new_b_name.strip():
+                st.error("กรุณาระบุชื่อสาขาใหม่")
+            elif new_b_name.strip() == target_b:
+                st.info("ยังไม่ได้เปลี่ยนเป็นชื่อใหม่")
+            else:
+                try:
+                    db.rename_branch(target_b, new_b_name.strip())
+                    st.session_state["branch_selector"] = new_b_name.strip()
+                    st.success(f"เปลี่ยนชื่อเป็น '{new_b_name.strip()}' สำเร็จ!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+        st.divider()
+        st.markdown("##### ➕ เพิ่มสาขาใหม่")
+        add_b_name = st.text_input("ชื่อสาขาใหม่ที่ต้องการเพิ่ม:", placeholder="เช่น สาขาเชียงใหม่, อาคาร 2")
+        if st.button("➕ เพิ่มสาขาใหม่", use_container_width=True):
+            if not add_b_name.strip():
+                st.error("กรุณากรอกชื่อสาขา")
+            else:
+                try:
+                    db.add_branch(add_b_name.strip())
+                    st.session_state["branch_selector"] = add_b_name.strip()
+                    st.success(f"เพิ่มสาขา '{add_b_name.strip()}' เรียบร้อย!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+        if len(branch_list) > 1:
+            st.divider()
+            st.markdown("##### 🗑️ ลบสาขา")
+            del_b = st.selectbox("เลือกสาขาที่ต้องการลบ (ข้อมูลในสาขานั้นจะถูกลบทั้งหมด):", branch_list, key="del_b_sel")
+            if st.button("🗑️ ยืนยันลบสาขานี้", type="secondary", use_container_width=True):
+                try:
+                    db.delete_branch(del_b)
+                    st.success(f"ลบสาขา '{del_b}' เรียบร้อยแล้ว!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
 @st.dialog("✏️ แก้ไขข้อมูลประวัติการตรวจเช็ค")
 def edit_record_modal(record):
     with st.form("modal_edit_form"):
@@ -197,22 +248,34 @@ def delete_record_modal(record_id, task_title):
             st.rerun()
 
 # -------------------------------------------------------------
+# โหลดข้อมูลตั้งค่าชื่อโรงพยาบาล และ รายชื่อสาขาจาก Database
+# -------------------------------------------------------------
+hospital_name = db.get_hospital_name()
+BRANCH_LIST = db.get_branches()
+
+# -------------------------------------------------------------
 # Main Header & Branch Selector
 # -------------------------------------------------------------
-col_header, col_branch = st.columns([2.5, 1.2])
+col_header, col_branch = st.columns([2.4, 1.3])
 
 with col_branch:
-    selected_branch = st.selectbox(
-        "🏥 เลือกสาขาที่ปฏิบัติงาน:",
-        options=BRANCH_LIST,
-        index=0,
-        key="branch_selector"
-    )
+    b_col1, b_col2 = st.columns([2.2, 1.2])
+    with b_col1:
+        selected_branch = st.selectbox(
+            "🏥 เลือกสาขาที่ปฏิบัติงาน:",
+            options=BRANCH_LIST,
+            key="branch_selector"
+        )
+    with b_col2:
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("⚙️ ตั้งชื่อ รพ./สาขา", use_container_width=True):
+            manage_org_modal(hospital_name, BRANCH_LIST, selected_branch)
+            
     st.markdown(f"<div style='text-align: right; color: #94a3b8; font-size: 0.85rem;'>🗓️ วันนี้: <b>{date.today().strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
 
 with col_header:
     st.markdown(f"<div class='branch-badge'>📍 กำลังแสดงข้อมูลเฉพาะ: {selected_branch}</div>", unsafe_allow_html=True)
-    st.title("🏥 ระบบติดตามรอบบำรุงรักษาเครื่องมือแพทย์")
+    st.title(f"🏥 {hospital_name}")
     st.caption(f"Central Sterile Supply Department (CSSD) • ข้อมูลแยกอิสระตามสาขา ({selected_branch})")
 
 # โหลดข้อมูลเฉพาะของสาขาที่เลือกเท่านั้น
@@ -293,7 +356,6 @@ with tab_overview:
     else:
         view_df = pd.DataFrame(processed_rows)
 
-        # ตัวกรองตาราง
         f_col1, f_col2 = st.columns([2, 2])
         with f_col1:
             all_types = list(df_equipments["type"].unique())
@@ -378,45 +440,59 @@ with tab_log:
                         st.rerun()
 
 # =============================================================
-# TAB 3: จัดการเครื่องจักร (เพิ่ม / ลบเครื่อง)
+# TAB 3: จัดการเครื่องจักร (เพิ่ม / ลบเครื่อง + พิมพ์ประเภทเครื่องเองได้)
 # =============================================================
 with tab_manage:
     st.subheader(f"⚙️ จัดการทะเบียนเครื่องจักร ({selected_branch})")
     st.info(f"📍 เครื่องจักรที่เพิ่มในหน้านี้ จะถูกบันทึกเข้าสู่ **{selected_branch}** โดยอัตโนมัติ (ไม่ปนกับสาขาอื่น)")
     
-    with st.expander(f"➕ เพิ่มเครื่องจักรใหม่เข้าสู่ {selected_branch}", expanded=True):
-        with st.form("add_eq_form", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                new_code = st.text_input("รหัสเครื่อง (Equipment Code) *", placeholder="เช่น ATC-01, ETO-01")
-                new_name = st.text_input("ชื่อเครื่อง *", placeholder="เช่น Autoclave 300L")
-                new_type = st.selectbox("ประเภทเครื่อง *", ["Autoclave", "ETO", "Plasma Sterilizer", "Washer Disinfector", "อื่นๆ"])
-            with c2:
-                new_brand = st.text_input("ยี่ห้อ / รุ่น", placeholder="เช่น Getinge GSS67")
-                new_loc = st.text_input("จุดติดตั้ง / แผนก", placeholder="เช่น CSSD ชั้น 2")
-                new_pm_freq = st.number_input("รอบ PM (ทุกๆ กี่เดือน)", min_value=1, max_value=36, value=6)
-            with c3:
-                new_cal_freq = st.number_input("รอบ Calibration (ทุกๆ กี่เดือน)", min_value=1, max_value=36, value=12)
-                last_pm = st.date_input("ตรวจ PM ล่าสุดเมื่อ (ถ้ามี)", value=None)
-                last_cal = st.date_input("ตรวจ Calibrate ล่าสุดเมื่อ (ถ้ามี)", value=None)
+    # รวมประเภทพื้นฐาน + ประเภทที่เคยพิมพ์เพิ่มไว้ก่อนหน้า
+    base_types = ["Autoclave", "ETO", "Plasma Sterilizer", "Washer Disinfector"]
+    existing_custom_types = [t for t in df_equipments["type"].unique() if t not in base_types] if not df_equipments.empty else []
+    type_options = base_types + existing_custom_types + ["อื่นๆ (ระบุเอง)"]
 
-            if st.form_submit_button(f"✨ บันทึกเครื่องจักรเข้า {selected_branch}", type="primary", use_container_width=True):
-                if not new_code.strip() or not new_name.strip():
-                    st.error("กรุณากรอกรหัสและชื่อเครื่องให้ครบถ้วน")
-                else:
-                    try:
-                        db.add_equipment(
-                            new_code.strip(), new_name.strip(), new_type,
-                            new_brand.strip(), new_loc.strip(),
-                            int(new_pm_freq), int(new_cal_freq),
-                            str(last_pm) if last_pm else None,
-                            str(last_cal) if last_cal else None,
-                            branch=selected_branch
-                        )
-                        st.success(f"✅ เพิ่มเครื่องจักร '{new_name}' เข้าสู่ {selected_branch} เรียบร้อยแล้ว!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
+    with st.expander(f"➕ เพิ่มเครื่องจักรใหม่เข้าสู่ {selected_branch}", expanded=True):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            new_code = st.text_input("รหัสเครื่อง (Equipment Code) *", placeholder="เช่น ATC-01, ETO-01", key="add_code")
+            new_name = st.text_input("ชื่อเครื่อง *", placeholder="เช่น Autoclave 300L", key="add_name")
+            selected_type_opt = st.selectbox("ประเภทเครื่อง *", type_options, key="add_type_sel")
+            
+            # ถ้าเลือก "อื่นๆ (ระบุเอง)" จะโชว์ช่องให้พิมพ์ชื่อประเภทได้ทันที
+            if selected_type_opt == "อื่นๆ (ระบุเอง)":
+                custom_type = st.text_input("✍️ พิมพ์ระบุประเภทเครื่อง *", placeholder="เช่น Ultrasonic Cleaner, เครื่องซีลซอง", key="add_type_custom")
+                final_type = custom_type.strip()
+            else:
+                final_type = selected_type_opt
+
+        with c2:
+            new_brand = st.text_input("ยี่ห้อ / รุ่น", placeholder="เช่น Getinge GSS67", key="add_brand")
+            new_loc = st.text_input("จุดติดตั้ง / แผนก", placeholder="เช่น CSSD ชั้น 2", key="add_loc")
+            new_pm_freq = st.number_input("รอบ PM (ทุกๆ กี่เดือน)", min_value=1, max_value=36, value=6, key="add_pm_f")
+        with c3:
+            new_cal_freq = st.number_input("รอบ Calibration (ทุกๆ กี่เดือน)", min_value=1, max_value=36, value=12, key="add_cal_f")
+            last_pm = st.date_input("ตรวจ PM ล่าสุดเมื่อ (ถ้ามี)", value=None, key="add_l_pm")
+            last_cal = st.date_input("ตรวจ Calibrate ล่าสุดเมื่อ (ถ้ามี)", value=None, key="add_l_cal")
+
+        if st.button(f"✨ บันทึกเครื่องจักรเข้า {selected_branch}", type="primary", use_container_width=True):
+            if not new_code.strip() or not new_name.strip():
+                st.error("⚠️ กรุณากรอกรหัสเครื่องและชื่อเครื่องให้ครบถ้วน")
+            elif not final_type:
+                st.error("⚠️ กรุณาพิมพ์ระบุประเภทเครื่องในช่อง 'พิมพ์ระบุประเภทเครื่อง'")
+            else:
+                try:
+                    db.add_equipment(
+                        new_code.strip(), new_name.strip(), final_type,
+                        new_brand.strip(), new_loc.strip(),
+                        int(new_pm_freq), int(new_cal_freq),
+                        str(last_pm) if last_pm else None,
+                        str(last_cal) if last_cal else None,
+                        branch=selected_branch
+                    )
+                    st.success(f"✅ เพิ่มเครื่องจักร '{new_name}' (ประเภท: {final_type}) เข้าสู่ {selected_branch} เรียบร้อยแล้ว!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาด: {e}")
 
     # แสดงรายชื่อและปุ่มลบเครื่องเฉพาะของสาขานี้
     if not df_equipments.empty:
