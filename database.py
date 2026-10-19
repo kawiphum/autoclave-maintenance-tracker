@@ -123,6 +123,13 @@ def update_user_role_branch(user_id, new_role, new_branch):
         conn.commit()
     finally: conn.close()
 
+def delete_user(user_id):
+    conn = get_connection()
+    try:
+        conn.execute(text("DELETE FROM users WHERE id=:id"), {"id": user_id})
+        conn.commit()
+    finally: conn.close()
+
 # -------------------------------------------------------------
 # Data Functions
 # -------------------------------------------------------------
