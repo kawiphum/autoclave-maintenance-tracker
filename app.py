@@ -89,7 +89,7 @@ if not st.session_state.logged_in:
     """, unsafe_allow_html=True)
 
     # ใส่โลโก้หน้าล็อกอิน (ดึงจากไฟล์ logo.png)
-    col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
+    col_img1, col_img2, col_img3 = st.columns([1, 0.25, 1])
     with col_img2:
         try:
             st.image("logo.png", use_column_width=True)
@@ -279,7 +279,7 @@ def delete_record_modal(record_id, task_title):
 # -------------------------------------------------------------
 col_h1, col_h2, col_h3 = st.columns([4, 2, 1])
 with col_h1:
-    c_logo, c_text = st.columns([0.1, 1])
+    c_logo, c_text = st.columns([0.25, 1])
     with c_logo:
         try:
             st.image("logo.png", use_column_width=True)
