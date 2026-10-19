@@ -446,23 +446,41 @@ with tab_history:
 
         if eq_records.empty: st.info("ไม่มีประวัติ")
         else:
+            pm_records = eq_records[eq_records["task_type"] == "PM"].copy()
+            cal_records = eq_records[eq_records["task_type"] == "Calibration"].copy()
+
             st.markdown(f"""
             <div style='display: flex; gap: 1rem; margin-bottom: 1.2rem;'>
                 <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
                     <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม PM สะสม</div>
-                    <div style='color: #10B981; font-size: 1.5rem; font-weight: 600;'>{len(eq_records[eq_records["task_type"] == "PM"])} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+                    <div style='color: #10B981; font-size: 1.5rem; font-weight: 600;'>{len(pm_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
                 </div>
                 <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
                     <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม Calibration สะสม</div>
-                    <div style='color: #3B82F6; font-size: 1.5rem; font-weight: 600;'>{len(eq_records[eq_records["task_type"] == "Calibration"])} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+                    <div style='color: #3B82F6; font-size: 1.5rem; font-weight: 600;'>{len(cal_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            display_records = eq_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
-            display_records.insert(0, 'ลำดับ', range(1, len(display_records) + 1))
-            st.dataframe(display_records[["ลำดับ", "task_type", "service_date", "technician", "result", "remarks"]], hide_index=True, use_container_width=True)
+            # ----------------- ตาราง PM -----------------
+            st.markdown("<h4 style='color:#10B981; font-size:1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem;'>ประวัติ Preventive Maintenance (PM)</h4>", unsafe_allow_html=True)
+            if pm_records.empty:
+                st.info("ไม่มีประวัติ PM")
+            else:
+                pm_records = pm_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
+                pm_records.insert(0, 'ลำดับ', range(1, len(pm_records) + 1))
+                st.dataframe(pm_records[["ลำดับ", "service_date", "technician", "result", "remarks"]], hide_index=True, use_container_width=True)
 
+            # ----------------- ตาราง Calibration -----------------
+            st.markdown("<h4 style='color:#3B82F6; font-size:1.1rem; margin-top: 2rem; margin-bottom: 0.5rem;'>ประวัติ Calibration</h4>", unsafe_allow_html=True)
+            if cal_records.empty:
+                st.info("ไม่มีประวัติ Calibration")
+            else:
+                cal_records = cal_records.sort_values(by=["service_date", "id"], ascending=[False, False]).reset_index(drop=True)
+                cal_records.insert(0, 'ลำดับ', range(1, len(cal_records) + 1))
+                st.dataframe(cal_records[["ลำดับ", "service_date", "technician", "result", "remarks"]], hide_index=True, use_container_width=True)
+
+            # ----------------- ส่วนแก้ไข / ลบ ข้อมูล -----------------
             st.markdown("<br><p style='font-size:1rem; color:#94A3B8; margin-bottom:0.5rem;'>จัดการข้อมูลประวัติ</p>", unsafe_allow_html=True)
             rec_options = {f"{r['service_date']} | {r['task_type']} | {r['result']}": r for _, r in eq_records.iterrows()}
             c_rec1, c_rec2, c_rec3 = st.columns([2, 1, 1])
@@ -471,7 +489,6 @@ with tab_history:
                 if st.button("แก้ไขรายการ", type="primary", use_container_width=True): edit_record_modal(target_record)
             with c_rec3:
                 if st.button("ลบรายการ", type="secondary", use_container_width=True): delete_record_modal(target_record["id"], target_record['task_type'])
-
 # =============================================================
 with tab_calc:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1.5rem;'>ระบบจำลองการคำนวณรอบ</h3>", unsafe_allow_html=True)
