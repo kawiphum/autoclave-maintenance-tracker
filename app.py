@@ -35,6 +35,11 @@ def logout():
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
+    
+    /* 🛑 บังคับพื้นหลังและตัวอักษรเป็น Dark Mode เสมอ ป้องกัน UI พังเมื่อเผลอเปิด Light Mode 🛑 */
+    .stApp, [data-testid="stAppViewContainer"] { background-color: #0f172a !important; }
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #f8fafc !important; }
+    
     html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
@@ -167,7 +172,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", " จัดการผู้ใช้งาน"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
@@ -215,11 +220,13 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
             user_opts = {f"👤 {r['username']} (ยศ: {r['role']} | สาขา: {r['branch']})": r['id'] for _, r in users_df.iterrows()}
             
             st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>มอบยศ / เปลี่ยนสาขา</p>", unsafe_allow_html=True)
+            
+            # 🛑 แก้บั๊กให้ยศ: ดึงกล่องเลือกรายชื่ออกมานอก st.form เพื่อให้อัปเดตข้อมูลแบบเรียลไทม์
+            sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()), key="edit_user_sel")
+            target_uid = user_opts[sel_u]
+            curr_u = users_df[users_df['id'] == target_uid].iloc[0]
+            
             with st.form("edit_user_form"):
-                sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()))
-                target_uid = user_opts[sel_u]
-                curr_u = users_df[users_df['id'] == target_uid].iloc[0]
-                
                 new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']))
                 b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
                 new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx)
@@ -242,7 +249,6 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                         db.delete_user(del_uid)
                         trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
                         st.rerun()
-
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
     with st.form("modal_edit_form"):
