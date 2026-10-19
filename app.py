@@ -167,7 +167,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", " จัดการผู้ใช้งาน"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
