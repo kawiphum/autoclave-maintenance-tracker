@@ -36,44 +36,48 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
     
-    /* 🛑 บังคับพื้นหลังและตัวอักษรเป็น Dark Mode เสมอ 🛑 */
+    /* บังคับหน้าจอหลักให้มืด */
     .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #f8fafc !important; }
-    
     html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
+    /* บังคับ Form และช่อง Input ปกติ */
+    div[data-testid="stForm"] { background-color: #0f172a !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 2rem !important; }
+    div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div {
+        background-color: #1e293b !important; border: 1px solid #475569 !important; border-radius: 6px !important;
+    }
+    input, textarea {
+        background-color: #1e293b !important; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important;
+    }
+    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
+
+    /* 🛑 จุดที่แก้: บังคับกล่องปฏิทิน (Calendar) และตัวเลือก (Dropdown) ที่ลอยอยู่ ให้มืดสนิท 🛑 */
+    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, div[data-baseweb="calendar"] {
+        background-color: #1e293b !important; border-radius: 8px !important;
+    }
+    /* บังคับตัวอักษรในปฏิทินและ Dropdown เป็นสีขาว */
+    ul[role="listbox"] li, div[data-baseweb="calendar"] *, div[data-baseweb="popover"] * {
+        color: #f8fafc !important; background-color: transparent !important;
+    }
+    /* สีเวลาเอาเมาส์ชี้ (Hover) ในปฏิทิน/Dropdown */
+    ul[role="listbox"] li:hover, div[data-baseweb="calendar"] div[role="button"]:hover {
+        background-color: #334155 !important;
+    }
+
+    /* ปุ่มต่างๆ และกล่องแสดงสถิติ */
     button[kind="primary"] { background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
     button[kind="primary"]:hover { background-color: #047857 !important; border-color: #047857 !important; }
-    
     button[kind="secondary"] { background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
     button[kind="secondary"]:hover { background-color: #475569 !important; border-color: #64748b !important; }
-
     .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
     .metric-card { background-color: #1e293b; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; }
     .metric-title { font-size: 1rem; color: #94a3b8; margin-bottom: 0.5rem; }
     .metric-value { font-size: 2rem; font-weight: 600; color: #f8fafc; }
-
     .stTabs [data-baseweb="tab-list"] { gap: 2rem; border-bottom: 1px solid #334155; background-color: transparent; }
     .stTabs [data-baseweb="tab"] { height: 50px; padding: 0; font-size: 1.05rem; color: #94a3b8; border: none; background: transparent; }
     .stTabs [aria-selected="true"] { color: #f8fafc !important; border-bottom: 3px solid #059669 !important; }
-
-    /* 🛑 แก้ปัญหากล่องข้อความ วันที่ และตัวเลข กลายเป็นสีขาวตอนเปิด Light Mode 🛑 */
-    div[data-testid="stForm"] { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 2rem; }
-    div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div, 
-    textarea, input, .stDateInput input, .stTextInput input, .stNumberInput input {
-        background-color: #1e293b !important;
-        color: #f8fafc !important;
-        -webkit-text-fill-color: #f8fafc !important;
-        border: 1px solid #475569 !important;
-        border-radius: 6px !important;
-        padding: 0.5rem !important;
-    }
-    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
-    
-    /* 🛑 แก้วันที่ Calendar Popup เป็นสีขาว 🛑 */
-    div[data-baseweb="calendar"], div[data-baseweb="popover"] { background-color: #1e293b !important; border: 1px solid #334155 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -289,7 +293,7 @@ with col_h1:
     c_logo, c_text = st.columns([0.25, 1]) 
     with c_logo:
         try:
-            st.image("logo.jpg", use_column_width=True)
+            st.image("logo.png", use_column_width=True)
         except:
             pass
     with c_text:
