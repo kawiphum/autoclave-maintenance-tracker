@@ -36,24 +36,18 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
     
-    /* 🛑 บังคับพื้นหลังและตัวอักษรเป็น Dark Mode เสมอ ป้องกัน UI พังเมื่อเผลอเปิด Light Mode 🛑 */
-    .stApp, [data-testid="stAppViewContainer"] { background-color: #0f172a !important; }
+    /* 🛑 บังคับพื้นหลังและตัวอักษรเป็น Dark Mode เสมอ 🛑 */
+    .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #f8fafc !important; }
     
     html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    button[kind="primary"] {
-        background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important;
-        border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease;
-    }
+    button[kind="primary"] { background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
     button[kind="primary"]:hover { background-color: #047857 !important; border-color: #047857 !important; }
     
-    button[kind="secondary"] {
-        background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important;
-        border-radius: 6px !important; font-weight: 500 !important;
-    }
+    button[kind="secondary"] { background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
     button[kind="secondary"]:hover { background-color: #475569 !important; border-color: #64748b !important; }
 
     .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
@@ -65,12 +59,21 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { height: 50px; padding: 0; font-size: 1.05rem; color: #94a3b8; border: none; background: transparent; }
     .stTabs [aria-selected="true"] { color: #f8fafc !important; border-bottom: 3px solid #059669 !important; }
 
+    /* 🛑 แก้ปัญหากล่องข้อความ วันที่ และตัวเลข กลายเป็นสีขาวตอนเปิด Light Mode 🛑 */
     div[data-testid="stForm"] { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 2rem; }
-    input, textarea, div[data-baseweb="select"] > div {
-        background-color: #1e293b !important; border: 1px solid #475569 !important; border-radius: 6px !important;
-        color: #f8fafc !important; padding: 0.5rem !important;
+    div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div, 
+    textarea, input, .stDateInput input, .stTextInput input, .stNumberInput input {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+        border-radius: 6px !important;
+        padding: 0.5rem !important;
     }
     input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
+    
+    /* 🛑 แก้วันที่ Calendar Popup เป็นสีขาว 🛑 */
+    div[data-baseweb="calendar"], div[data-baseweb="popover"] { background-color: #1e293b !important; border: 1px solid #334155 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -221,34 +224,32 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
             
             st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>มอบยศ / เปลี่ยนสาขา</p>", unsafe_allow_html=True)
             
-            # 🛑 แก้บั๊กให้ยศ: ดึงกล่องเลือกรายชื่ออกมานอก st.form เพื่อให้อัปเดตข้อมูลแบบเรียลไทม์
+            # 🛑 นำระบบมอบยศออกจาก st.form เพื่อให้ข้อมูลเรียลไทม์ เซฟได้ชัวร์ 100% 🛑
             sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()), key="edit_user_sel")
             target_uid = user_opts[sel_u]
             curr_u = users_df[users_df['id'] == target_uid].iloc[0]
             
-            with st.form("edit_user_form"):
-                new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']))
-                b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
-                new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx)
-                
-                if st.form_submit_button("บันทึกการเปลี่ยนแปลง", type="primary", use_container_width=True):
-                    db.update_user_role_branch(target_uid, new_r, new_b)
-                    trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
-                    st.rerun()
+            new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']), key="role_sel")
+            b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
+            new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx, key="branch_sel")
+            
+            if st.button("บันทึกการเปลี่ยนแปลงสิทธิ์", type="primary", use_container_width=True):
+                db.update_user_role_branch(target_uid, new_r, new_b)
+                trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
+                st.rerun()
 
             st.markdown("<br><p style='font-weight:600; margin-bottom:0.5rem; color:#EF4444;'>ลบบัญชีผู้ใช้งาน</p>", unsafe_allow_html=True)
-            with st.form("delete_user_form"):
-                del_u = st.selectbox("เลือกบัญชีที่ต้องการลบ", list(user_opts.keys()), key="del_user_sel")
-                if st.form_submit_button("ลบบัญชีนี้", type="secondary", use_container_width=True):
-                    del_uid = user_opts[del_u]
-                    target_username = users_df[users_df['id'] == del_uid].iloc[0]['username']
-                    
-                    if target_username == st.session_state.username:
-                        st.error("ไม่อนุญาตให้ลบบัญชีของตัวเองที่กำลังใช้งานอยู่ได้")
-                    else:
-                        db.delete_user(del_uid)
-                        trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
-                        st.rerun()
+            del_u = st.selectbox("เลือกบัญชีที่ต้องการลบ", list(user_opts.keys()), key="del_user_sel")
+            if st.button("ลบบัญชีนี้", type="secondary", use_container_width=True):
+                del_uid = user_opts[del_u]
+                target_username = users_df[users_df['id'] == del_uid].iloc[0]['username']
+                
+                if target_username == st.session_state.username:
+                    st.error("ไม่อนุญาตให้ลบบัญชีของตัวเองที่กำลังใช้งานอยู่ได้")
+                else:
+                    db.delete_user(del_uid)
+                    trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
+                    st.rerun()
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
     with st.form("modal_edit_form"):
@@ -285,18 +286,24 @@ def delete_record_modal(record_id, task_title):
 # -------------------------------------------------------------
 col_h1, col_h2, col_h3 = st.columns([4, 2, 1])
 with col_h1:
-    c_logo, c_text = st.columns([0.25, 1])
+    c_logo, c_text = st.columns([0.25, 1]) 
     with c_logo:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
-            pass # ถ้าไม่มีรูปก็ปล่อยผ่าน
+            pass
     with c_text:
         st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.2rem; margin-top: 0;'>{hospital_name}</h1>", unsafe_allow_html=True)
         
         if st.session_state.role == "super_admin":
             if st.session_state.branch not in BRANCH_LIST: st.session_state.branch = BRANCH_LIST[0] if BRANCH_LIST else ""
-            st.session_state.branch = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
+            
+            # 🛑 แก้บั๊กสลับสาขายาก: ให้ตรวจจับการเปลี่ยนแปลงแล้วรีเฟรชทันที
+            sel_b = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
+            if sel_b != st.session_state.branch:
+                st.session_state.branch = sel_b
+                st.rerun()
+                
         else:
             role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานทั่วไป"
             st.markdown(f"<p style='color: #94A3B8; font-size: 1rem; margin-top: -5px;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> <span style='color:#10B981;'>[{role_th}]</span></p>", unsafe_allow_html=True)
