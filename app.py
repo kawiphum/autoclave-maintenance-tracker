@@ -11,6 +11,7 @@ st.set_page_config(page_title="Maintenance System", layout="wide", initial_sideb
 # -------------------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+    st.session_state.username = ""
     st.session_state.role = ""
     st.session_state.branch = ""
 
@@ -19,6 +20,7 @@ def trigger_notification(message):
 
 def logout():
     st.session_state.logged_in = False
+    st.session_state.username = ""
     st.session_state.role = ""
     st.session_state.branch = ""
     st.rerun()
@@ -61,12 +63,12 @@ st.markdown("""
     }
     input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
 
-    .login-box { max-width: 450px; margin: 5rem auto; background: #0f172a; padding: 2.5rem; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .login-box { max-width: 450px; margin: 4rem auto; background: #0f172a; padding: 2.5rem; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 3. หน้าล็อกอิน (Login Screen)
+# 3. หน้าล็อกอิน & สมัครสมาชิก
 # -------------------------------------------------------------
 BRANCH_LIST = db.get_branches()
 hospital_name = db.get_hospital_name()
@@ -77,27 +79,37 @@ if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<div class='login-box'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align: center; margin-bottom: 1.5rem;'>เข้าสู่ระบบ</h3>", unsafe_allow_html=True)
+        tab_login, tab_reg = st.tabs(["🔑 เข้าสู่ระบบ", "📝 สมัครสมาชิกใหม่"])
         
-        login_mode = st.radio("เลือกประเภทผู้ใช้งาน", ["เข้าสู่ระบบสาขา", "เจ้าของระบบ (Super Admin)"], horizontal=True, label_visibility="collapsed")
-        
-        if login_mode == "เข้าสู่ระบบสาขา":
-            sel_branch = st.selectbox("เลือกพื้นที่ปฏิบัติงาน", BRANCH_LIST)
-        else:
-            sel_branch = "Super Admin"
-            
-        pw = st.text_input("รหัสผ่าน", type="password")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("ยืนยันการเข้าสู่ระบบ", type="primary", use_container_width=True):
-            role = db.verify_login(sel_branch, pw)
-            if role:
-                st.session_state.logged_in = True
-                st.session_state.role = role
-                st.session_state.branch = sel_branch if role != "super_admin" else BRANCH_LIST[0]
-                st.rerun()
-            else:
-                st.error("รหัสผ่านไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง")
+        with tab_login:
+            with st.form("login_form"):
+                user = st.text_input("ชื่อผู้ใช้งาน (Username)")
+                pw = st.text_input("รหัสผ่าน", type="password")
+                if st.form_submit_button("เข้าสู่ระบบ", type="primary", use_container_width=True):
+                    user_data = db.login_user(user.strip(), pw.strip())
+                    if user_data:
+                        st.session_state.logged_in = True
+                        st.session_state.username = user.strip()
+                        st.session_state.role = user_data["role"]
+                        st.session_state.branch = user_data["branch"]
+                        st.rerun()
+                    else:
+                        st.error("ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง")
+                        
+        with tab_reg:
+            with st.form("reg_form"):
+                st.info("สมาชิกใหม่จะได้รับสิทธิ์เป็น 'ผู้ใช้งานทั่วไป' อัตโนมัติ")
+                new_user = st.text_input("ตั้งชื่อผู้ใช้งาน")
+                new_pw = st.text_input("ตั้งรหัสผ่าน", type="password")
+                sel_branch = st.selectbox("เลือกสาขาที่ปฏิบัติงาน", BRANCH_LIST)
+                if st.form_submit_button("สมัครสมาชิก", type="primary", use_container_width=True):
+                    if new_user and new_pw:
+                        if db.register_user(new_user.strip(), new_pw.strip(), sel_branch):
+                            st.success("สมัครสมาชิกสำเร็จ! กรุณาไปที่แท็บเข้าสู่ระบบ")
+                        else:
+                            st.error("ชื่อผู้ใช้งานนี้มีคนใช้แล้ว")
+                    else:
+                        st.error("กรุณากรอกข้อมูลให้ครบถ้วน")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop() # หยุดการทำงานตรงนี้ถ้ายังไม่ล็อกอิน
 
@@ -115,16 +127,15 @@ def calculate_status(due_date_str):
         else: return f"ปกติ ({days_left} วัน)", 100, "normal"
     except: return "ข้อมูลไม่ถูกต้อง", 0, "none"
 
-# --- Dialog จัดการระบบ (แอดมินเท่านั้น) ---
+# --- Dialog จัดการระบบ (Admin และ Super Admin เท่านั้น) ---
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
-    # กำหนดแท็บตามสิทธิ์
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "รหัสผ่านสาขา", "รหัสเจ้าของระบบ"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน (มอบยศ)"])
     else:
-        tabs = st.tabs(["จัดการสาขา", "รหัสผ่านสาขา"])
+        tabs = st.tabs(["จัดการสาขา"])
 
-    # 1. แท็บเจ้าของระบบ (เปลี่ยนชื่อ รพ.)
+    # แท็บเปลี่ยนชื่อระบบ (Super Admin)
     if role == "super_admin":
         with tabs[0]:
             with st.form("hosp_form"):
@@ -134,7 +145,7 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("อัปเดตชื่อระบบสำเร็จ")
                     st.rerun()
 
-    # 2. แท็บจัดการสาขา (Admin & Super Admin)
+    # แท็บจัดการสาขา (Admin & Super Admin)
     tab_b = tabs[1] if role == "super_admin" else tabs[0]
     with tab_b:
         with st.form("rename_form"):
@@ -164,35 +175,24 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("ลบสาขาสำเร็จ")
                     st.rerun()
 
-    # 3. แท็บตั้งรหัสผ่านสาขา
-    tab_pw = tabs[2] if role == "super_admin" else tabs[1]
-    with tab_pw:
-        with st.form("branch_pw_form"):
-            if role == "super_admin":
-                pw_branch = st.selectbox("เลือกรหัสผ่านของสาขา", branches)
-            else:
-                pw_branch = current_branch
-                st.text_input("สาขาที่กำลังแก้ไข", value=pw_branch, disabled=True)
-            
-            apw, upw = db.get_branch_passwords(pw_branch)
-            new_apw = st.text_input("รหัสผ่านใหม่ (สำหรับแอดมินสาขา)", value=apw)
-            new_upw = st.text_input("รหัสผ่านใหม่ (สำหรับผู้ใช้สาขา)", value=upw)
-            
-            if st.form_submit_button("บันทึกรหัสผ่านสาขา", type="primary", use_container_width=True):
-                db.update_branch_passwords(pw_branch, new_apw, new_upw)
-                trigger_notification("เปลี่ยนรหัสผ่านสาขาสำเร็จ")
-                st.rerun()
-
-    # 4. แท็บรหัสผ่านเจ้าของระบบ (Super Admin เท่านั้น)
+    # แท็บมอบยศ (Super Admin เท่านั้น)
     if role == "super_admin":
-        with tabs[3]:
-            with st.form("super_pw_form"):
-                new_super_pw = st.text_input("ตั้งรหัสผ่านเจ้าของระบบใหม่", type="password")
-                if st.form_submit_button("บันทึกรหัสผ่านใหม่", type="primary", use_container_width=True):
-                    if new_super_pw.strip():
-                        db.update_super_admin_password(new_super_pw.strip())
-                        trigger_notification("เปลี่ยนรหัสผ่านเจ้าของระบบสำเร็จ")
-                        st.rerun()
+        with tabs[2]:
+            users_df = db.get_all_users()
+            user_opts = {f"👤 {r['username']} (ยศ: {r['role']} | สาขา: {r['branch']})": r['id'] for _, r in users_df.iterrows()}
+            
+            with st.form("edit_user_form"):
+                sel_u = st.selectbox("เลือกบัญชีผู้ใช้ที่ต้องการมอบยศ", list(user_opts.keys()))
+                target_uid = user_opts[sel_u]
+                curr_u = users_df[users_df['id'] == target_uid].iloc[0]
+                
+                new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']))
+                new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0)
+                
+                if st.form_submit_button("บันทึกการเปลี่ยนแปลง", type="primary", use_container_width=True):
+                    db.update_user_role_branch(target_uid, new_r, new_b)
+                    trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
+                    st.rerun()
 
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
@@ -232,23 +232,22 @@ col_h1, col_h2, col_h3 = st.columns([3, 2, 1])
 with col_h1:
     st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.2rem;'>{hospital_name}</h1>", unsafe_allow_html=True)
     
-    # ถ้าเป็น super_admin ให้มี selectbox สลับสาขาดูได้, ถ้าเป็น admin/user ให้โชว์เป็นข้อความล็อกไว้
     if st.session_state.role == "super_admin":
         st.session_state.branch = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
     else:
-        role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานสาขา"
-        st.markdown(f"<p style='color: #94A3B8; font-size: 1rem;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> ({role_th})</p>", unsafe_allow_html=True)
+        role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานทั่วไป"
+        st.markdown(f"<p style='color: #94A3B8; font-size: 1rem;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> <span style='color:#10B981;'>[{role_th}]</span></p>", unsafe_allow_html=True)
 
 with col_h2:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    # แสดงปุ่มตั้งค่าเฉพาะ Admin และ Super Admin
+    # แสดงปุ่มตั้งค่าเฉพาะ Admin และ Super Admin (ผู้ใช้ธรรมดาจะไม่เห็นปุ่มนี้เลย)
     if st.session_state.role in ["admin", "super_admin"]:
         if st.button("⚙️ ตั้งค่าระบบ", use_container_width=True):
             manage_org_modal(hospital_name, BRANCH_LIST, st.session_state.branch, st.session_state.role)
 
 with col_h3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("ออกจากระบบ", type="secondary", use_container_width=True):
+    if st.button("🚪 ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
 # แจ้งเตือนกลางจอ
@@ -329,9 +328,12 @@ with tab_manage:
             if not new_code.strip() or not new_name.strip() or not custom_type.strip(): st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
                 with st.spinner("⏳ กำลังบันทึกข้อมูล..."):
-                    db.add_equipment(new_code.strip(), new_name.strip(), custom_type.strip(), new_brand.strip(), new_loc.strip(), int(new_pm_freq), int(new_cal_freq), str(last_pm) if last_pm else None, str(last_cal) if last_cal else None, st.session_state.branch)
-                    trigger_notification("ลงทะเบียนเรียบร้อย")
-                    st.rerun()
+                    try:
+                        db.add_equipment(new_code.strip(), new_name.strip(), custom_type.strip(), new_brand.strip(), new_loc.strip(), int(new_pm_freq), int(new_cal_freq), str(last_pm) if last_pm else None, str(last_cal) if last_cal else None, st.session_state.branch)
+                        trigger_notification("ลงทะเบียนเรียบร้อย")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
 
     if not df_equipments.empty:
         st.markdown("<br><h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลบข้อมูลเครื่องจักร</h3>", unsafe_allow_html=True)
@@ -357,7 +359,7 @@ with tab_log:
                 task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
                 service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
             with col2:
-                technician = st.text_input("ผู้ดำเนินการ *")
+                technician = st.text_input("ผู้ดำเนินการ *", value=st.session_state.username) # ใส่ชื่อคนล็อกอินให้เลยอัตโนมัติ
                 result = st.selectbox("ผลการตรวจสอบ *", ["Passed", "Passed with Condition", "Failed"])
                 remarks = st.text_area("หมายเหตุ")
             if st.form_submit_button("บันทึกประวัติ", type="primary"):
