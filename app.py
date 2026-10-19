@@ -167,7 +167,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", " จัดการผู้ใช้งาน (มอบยศ)"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
@@ -214,13 +214,13 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
             users_df = db.get_all_users()
             user_opts = {f"👤 {r['username']} (ยศ: {r['role']} | สาขา: {r['branch']})": r['id'] for _, r in users_df.iterrows()}
             
+            st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>มอบยศ / เปลี่ยนสาขา</p>", unsafe_allow_html=True)
             with st.form("edit_user_form"):
-                sel_u = st.selectbox("เลือกบัญชีผู้ใช้ที่ต้องการมอบยศ", list(user_opts.keys()))
+                sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()))
                 target_uid = user_opts[sel_u]
                 curr_u = users_df[users_df['id'] == target_uid].iloc[0]
                 
                 new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']))
-                # ป้องกัน Error ถ้าสาขาของ User ไม่มีใน List
                 b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
                 new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx)
                 
@@ -228,6 +228,20 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     db.update_user_role_branch(target_uid, new_r, new_b)
                     trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
                     st.rerun()
+
+            st.markdown("<br><p style='font-weight:600; margin-bottom:0.5rem; color:#EF4444;'>ลบบัญชีผู้ใช้งาน</p>", unsafe_allow_html=True)
+            with st.form("delete_user_form"):
+                del_u = st.selectbox("เลือกบัญชีที่ต้องการลบ", list(user_opts.keys()), key="del_user_sel")
+                if st.form_submit_button("ลบบัญชีนี้", type="secondary", use_container_width=True):
+                    del_uid = user_opts[del_u]
+                    target_username = users_df[users_df['id'] == del_uid].iloc[0]['username']
+                    
+                    if target_username == st.session_state.username:
+                        st.error("ไม่อนุญาตให้ลบบัญชีของตัวเองที่กำลังใช้งานอยู่ได้")
+                    else:
+                        db.delete_user(del_uid)
+                        trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
+                        st.rerun()
 
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
