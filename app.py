@@ -76,55 +76,25 @@ BRANCH_LIST = db.get_branches()
 hospital_name = db.get_hospital_name()
 
 if not st.session_state.logged_in:
-    # CSS เฉพาะหน้า Login เพื่อให้ตรงกับรูปภาพอ้างอิง
     st.markdown("""
     <style>
         .stApp { background-color: #121212; }
-        div[data-testid="stForm"] {
-            background-color: #1e1e1e !important;
-            border: none !important;
-            border-radius: 24px !important;
-            padding: 2.5rem 2rem !important;
-        }
-        .stTextInput>div>div>input, .stSelectbox>div>div>div {
-            background-color: #2d2d2d !important;
-            border: none !important;
-            border-radius: 12px !important;
-            color: #ffffff !important;
-            padding: 0.8rem 1rem !important;
-        }
-        button[kind="primary"] {
-            background-color: #3a3a3a !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 12px !important;
-            padding: 0.8rem !important;
-            font-weight: 600 !important;
-            margin-top: 1rem !important;
-        }
+        div[data-testid="stForm"] { background-color: #1e1e1e !important; border: none !important; border-radius: 24px !important; padding: 2.5rem 2rem !important; }
+        .stTextInput>div>div>input, .stSelectbox>div>div>div { background-color: #2d2d2d !important; border: none !important; border-radius: 12px !important; color: #ffffff !important; padding: 0.8rem 1rem !important; }
+        button[kind="primary"] { background-color: #3a3a3a !important; color: #ffffff !important; border: none !important; border-radius: 12px !important; padding: 0.8rem !important; font-weight: 600 !important; margin-top: 1rem !important; }
         button[kind="primary"]:hover { background-color: #4a4a4a !important; }
-        
-        /* สไตล์ปุ่มลิงก์สลับหน้า */
-        .toggle-btn button {
-            background-color: transparent !important;
-            color: #888888 !important;
-            border: none !important;
-            font-size: 0.9rem !important;
-        }
+        .toggle-btn button { background-color: transparent !important; color: #888888 !important; border: none !important; font-size: 0.9rem !important; }
         .toggle-btn button:hover { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # โลโก้กลมๆ ตรงกลาง
-    st.markdown("""
-        <div style="display: flex; justify-content: center; margin-top: 4rem; margin-bottom: 1rem;">
-            <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,255,255,0.1);">
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;">
-                    <span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span>
-                </div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    # ใส่โลโก้หน้าล็อกอิน (ดึงจากไฟล์ logo.png)
+    col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
+    with col_img2:
+        try:
+            st.image("logo.jpg", use_column_width=True)
+        except:
+            st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
     
     st.markdown(f"<h2 style='text-align: center; color: white; font-family: Prompt; margin-bottom: 2rem;'>{hospital_name}</h2>", unsafe_allow_html=True)
 
@@ -156,14 +126,19 @@ if not st.session_state.logged_in:
                 st.markdown("<p style='color:#888; text-align:center;'>สมาชิกใหม่จะได้รับสิทธิ์เป็น 'ผู้ใช้งานทั่วไป'</p>", unsafe_allow_html=True)
                 new_user = st.text_input("ตั้งชื่อผู้ใช้งาน")
                 new_pw = st.text_input("ตั้งรหัสผ่าน", type="password")
+                confirm_pw = st.text_input("ยืนยันรหัสผ่าน", type="password") # เพิ่มช่องยืนยันรหัสผ่าน
                 sel_branch = st.selectbox("เลือกสาขาที่ปฏิบัติงาน", BRANCH_LIST)
+                
                 if st.form_submit_button("ยืนยันสมัครสมาชิก (Sign up)", type="primary", use_container_width=True):
-                    if new_user and new_pw:
-                        if db.register_user(new_user.strip(), new_pw.strip(), sel_branch):
-                            st.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ")
-                            st.session_state.auth_mode = "login"
+                    if new_user and new_pw and confirm_pw:
+                        if new_pw != confirm_pw:
+                            st.error("รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง")
                         else:
-                            st.error("ชื่อผู้ใช้งานนี้มีคนใช้แล้ว")
+                            if db.register_user(new_user.strip(), new_pw.strip(), sel_branch):
+                                st.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ")
+                                st.session_state.auth_mode = "login"
+                            else:
+                                st.error("ชื่อผู้ใช้งานนี้มีคนใช้แล้ว")
                     else:
                         st.error("กรุณากรอกข้อมูลให้ครบถ้วน")
 
@@ -173,8 +148,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    st.stop() # หยุดการทำงานตรงนี้ถ้ายังไม่ล็อกอิน
-
+    st.stop()
 # -------------------------------------------------------------
 # 4. ฟังก์ชันหลักสำหรับคนล็อกอินแล้ว
 # -------------------------------------------------------------
@@ -193,7 +167,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน (มอบยศ)"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", " จัดการผู้ใช้งาน (มอบยศ)"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
@@ -289,28 +263,33 @@ def delete_record_modal(record_id, task_title):
 # -------------------------------------------------------------
 # Layout ของเว็บเมื่อล็อกอินแล้ว
 # -------------------------------------------------------------
-col_h1, col_h2, col_h3 = st.columns([3, 2, 1])
+col_h1, col_h2, col_h3 = st.columns([4, 2, 1])
 with col_h1:
-    st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.2rem;'>{hospital_name}</h1>", unsafe_allow_html=True)
-    
-    # 🛑 แก้ไขบั๊ก ValueError ตรงนี้ 🛑
-    if st.session_state.role == "super_admin":
-        if st.session_state.branch not in BRANCH_LIST:
-            st.session_state.branch = BRANCH_LIST[0] if BRANCH_LIST else ""
-        st.session_state.branch = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
-    else:
-        role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานทั่วไป"
-        st.markdown(f"<p style='color: #94A3B8; font-size: 1rem;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> <span style='color:#10B981;'>[{role_th}]</span></p>", unsafe_allow_html=True)
+    c_logo, c_text = st.columns([0.1, 1])
+    with c_logo:
+        try:
+            st.image("logo.jpg", use_column_width=True)
+        except:
+            pass # ถ้าไม่มีรูปก็ปล่อยผ่าน
+    with c_text:
+        st.markdown(f"<h1 style='font-size: 1.8rem; margin-bottom: 0.2rem; margin-top: 0;'>{hospital_name}</h1>", unsafe_allow_html=True)
+        
+        if st.session_state.role == "super_admin":
+            if st.session_state.branch not in BRANCH_LIST: st.session_state.branch = BRANCH_LIST[0] if BRANCH_LIST else ""
+            st.session_state.branch = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
+        else:
+            role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานทั่วไป"
+            st.markdown(f"<p style='color: #94A3B8; font-size: 1rem; margin-top: -5px;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> <span style='color:#10B981;'>[{role_th}]</span></p>", unsafe_allow_html=True)
 
 with col_h2:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     if st.session_state.role in ["admin", "super_admin"]:
-        if st.button("⚙️ ตั้งค่าระบบ", use_container_width=True):
+        if st.button(" ตั้งค่าระบบ", use_container_width=True):
             manage_org_modal(hospital_name, BRANCH_LIST, st.session_state.branch, st.session_state.role)
 
 with col_h3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("🚪 ออกจากระบบ", type="secondary", use_container_width=True):
+    if st.button(" ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
 # แจ้งเตือนกลางจอ
