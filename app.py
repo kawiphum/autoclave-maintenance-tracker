@@ -92,7 +92,7 @@ if not st.session_state.logged_in:
     col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
     with col_img2:
         try:
-            st.image("logo.jpg", use_column_width=True)
+            st.image("logo.png", use_column_width=True)
         except:
             st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
     
@@ -268,7 +268,7 @@ with col_h1:
     c_logo, c_text = st.columns([0.1, 1])
     with c_logo:
         try:
-            st.image("logo.jpg", use_column_width=True)
+            st.image("logo.png", use_column_width=True)
         except:
             pass # ถ้าไม่มีรูปก็ปล่อยผ่าน
     with c_text:
