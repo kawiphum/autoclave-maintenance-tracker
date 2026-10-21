@@ -36,41 +36,26 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
     
-    /* บังคับหน้าจอหลักให้มืด */
     .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #f8fafc !important; }
+    
     html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    /* บังคับ Form และช่อง Input ปกติ */
-    div[data-testid="stForm"] { background-color: #0f172a !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 2rem !important; }
-    div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div {
-        background-color: #1e293b !important; border: 1px solid #475569 !important; border-radius: 6px !important;
-    }
-    input, textarea {
-        background-color: #1e293b !important; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important;
-    }
-    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
-
-    /* 🛑 จุดที่แก้: บังคับกล่องปฏิทิน (Calendar) และตัวเลือก (Dropdown) ที่ลอยอยู่ ให้มืดสนิท 🛑 */
-    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, div[data-baseweb="calendar"] {
-        background-color: #1e293b !important; border-radius: 8px !important;
-    }
-    /* บังคับตัวอักษรในปฏิทินและ Dropdown เป็นสีขาว */
-    ul[role="listbox"] li, div[data-baseweb="calendar"] *, div[data-baseweb="popover"] * {
-        color: #f8fafc !important; background-color: transparent !important;
-    }
-    /* สีเวลาเอาเมาส์ชี้ (Hover) ในปฏิทิน/Dropdown */
-    ul[role="listbox"] li:hover, div[data-baseweb="calendar"] div[role="button"]:hover {
-        background-color: #334155 !important;
+    /* 🛑 แก้บั๊กให้ปุ่ม Toggle รหัสผ่านกลับมาเป็นรูปลูกตา 🛑 */
+    .stTextInput div[data-baseweb="input"] button span, 
+    .stTextInput div[data-baseweb="input"] button * {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+        color: #94A3B8 !important;
+        font-size: 1.2rem !important;
     }
 
-    /* ปุ่มต่างๆ และกล่องแสดงสถิติ */
     button[kind="primary"] { background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
     button[kind="primary"]:hover { background-color: #047857 !important; border-color: #047857 !important; }
     button[kind="secondary"] { background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
     button[kind="secondary"]:hover { background-color: #475569 !important; border-color: #64748b !important; }
+
     .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
     .metric-card { background-color: #1e293b; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; }
     .metric-title { font-size: 1rem; color: #94a3b8; margin-bottom: 0.5rem; }
@@ -78,6 +63,14 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] { gap: 2rem; border-bottom: 1px solid #334155; background-color: transparent; }
     .stTabs [data-baseweb="tab"] { height: 50px; padding: 0; font-size: 1.05rem; color: #94a3b8; border: none; background: transparent; }
     .stTabs [aria-selected="true"] { color: #f8fafc !important; border-bottom: 3px solid #059669 !important; }
+
+    div[data-testid="stForm"] { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 2rem; }
+    div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div, 
+    textarea, input, .stDateInput input, .stTextInput input, .stNumberInput input {
+        background-color: #1e293b !important; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; padding: 0.5rem !important;
+    }
+    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
+    div[data-baseweb="calendar"], div[data-baseweb="popover"] { background-color: #1e293b !important; border: 1px solid #334155 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -204,23 +197,24 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
                     st.rerun()
 
-        with st.form("add_b_form"):
-            add_b = st.text_input("เพิ่มสาขาใหม่")
-            if st.form_submit_button("สร้างสาขา", use_container_width=True):
-                if add_b.strip():
-                    db.add_branch(add_b.strip())
-                    trigger_notification("สร้างสาขาเรียบร้อย")
-                    st.rerun()
+        # 🛑 จำกัดสิทธิ์: เฉพาะ Super Admin เท่านั้นถึงจะเพิ่มและลบสาขาได้ 🛑
+        if role == "super_admin":
+            with st.form("add_b_form"):
+                add_b = st.text_input("เพิ่มสาขาใหม่")
+                if st.form_submit_button("สร้างสาขา", use_container_width=True):
+                    if add_b.strip():
+                        db.add_branch(add_b.strip())
+                        trigger_notification("สร้างสาขาเรียบร้อย")
+                        st.rerun()
 
-        if len(branches) > 1:
-            with st.form("del_b_form"):
-                del_b = st.selectbox("เลือกลบสาขา", branches)
-                if st.form_submit_button("ลบสาขานี้", type="secondary", use_container_width=True):
-                    db.delete_branch(del_b)
-                    if st.session_state.branch == del_b: st.session_state.branch = branches[0]
-                    trigger_notification("ลบสาขาสำเร็จ")
-                    st.rerun()
-
+            if len(branches) > 1:
+                with st.form("del_b_form"):
+                    del_b = st.selectbox("เลือกลบสาขา", branches)
+                    if st.form_submit_button("ลบสาขานี้", type="secondary", use_container_width=True):
+                        db.delete_branch(del_b)
+                        if st.session_state.branch == del_b: st.session_state.branch = branches[0]
+                        trigger_notification("ลบสาขาสำเร็จ")
+                        st.rerun()
     if role == "super_admin":
         with tabs[2]:
             users_df = db.get_all_users()
@@ -432,18 +426,21 @@ with tab_log:
                 task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
                 service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
             with col2:
-                technician = st.text_input("ผู้ดำเนินการ *", value=st.session_state.username)
+                # 🛑 แก้ไข: ปล่อยว่างให้พิมพ์ชื่อช่างได้อย่างอิสระ 🛑
+                technician = st.text_input("ผู้ดำเนินการ *", placeholder="ระบุชื่อผู้ดำเนินการ")
                 result = st.selectbox("ผลการตรวจสอบ *", ["Passed", "Passed with Condition", "Failed"])
                 remarks = st.text_area("หมายเหตุ")
+            
             if st.form_submit_button("บันทึกประวัติ", type="primary"):
                 if not technician.strip(): st.error("กรุณาระบุผู้ดำเนินการ")
                 else:
-                    with st.spinner("⏳ กำลังบันทึกประวัติ..."):
-                        if db.check_duplicate_service(int(eq_options[selected_label]), task_type, str(service_date)): st.warning("มีประวัติในระบบแล้ว")
-                        else:
-                            db.log_service(int(eq_options[selected_label]), task_type, str(service_date), technician.strip(), result, remarks.strip())
-                            trigger_notification("บันทึกสำเร็จ")
-                            st.rerun()
+                    if db.check_duplicate_service(int(eq_options[selected_label]), task_type, str(service_date)): 
+                        st.warning("มีประวัติในระบบแล้ว")
+                    else:
+                        # นำ Spinner ออกเพื่อให้ระบบไม่ต้องเสียเวลาวาดกราฟิกโหลด เซฟแล้วไปเลยทันที
+                        db.log_service(int(eq_options[selected_label]), task_type, str(service_date), technician.strip(), result, remarks.strip())
+                        trigger_notification("บันทึกสำเร็จ")
+                        st.rerun()
 
 # =============================================================
 with tab_history:
