@@ -163,6 +163,10 @@ def clear_all_caches():
     get_branches.clear()
     get_branch_data_cached.clear()
 
+# 🛑 เพิ่มฟังก์ชันนี้: ล้างเฉพาะแคชตารางข้อมูล ไม่ต้องดึงชื่อ รพ. หรือสาขาใหม่ให้เสียเวลา
+def clear_data_cache_only():
+    get_branch_data_cached.clear()
+
 def update_hospital_name(new_name):
     conn = get_connection()
     try:
@@ -217,7 +221,7 @@ def add_equipment(code, name, eq_type, brand, location, pm_freq, cal_freq, last_
             VALUES (:code, :name, :type, :brand, :loc, :pm_f, :cal_f, :l_pm, :n_pm, :l_cal, :n_cal, :branch)
         """), {"code": code, "name": name, "type": eq_type, "brand": brand, "loc": location, "pm_f": pm_freq, "cal_f": cal_freq, "l_pm": last_pm, "n_pm": next_pm, "l_cal": last_cal, "n_cal": next_cal, "branch": branch})
         conn.commit()
-        clear_all_caches()
+        clear_data_cache_only() # 🛑 ล้างแคชเฉพาะข้อมูลตาราง
     finally: conn.close()
 
 def delete_equipment(eq_id):
@@ -226,7 +230,7 @@ def delete_equipment(eq_id):
         conn.execute(text("DELETE FROM service_records WHERE equipment_id = :id"), {"id": eq_id})
         conn.execute(text("DELETE FROM equipments WHERE id = :id"), {"id": eq_id})
         conn.commit()
-        clear_all_caches()
+        clear_data_cache_only() # 🛑 ล้างแคชเฉพาะข้อมูลตาราง
     finally: conn.close()
 
 def check_duplicate_service(eq_id, task_type, service_date):
@@ -257,7 +261,7 @@ def log_service(eq_id, task_type, service_date, technician, result, remarks):
             "eq_id": eq_id, "t_type": task_type, "s_date": service_date, "n_due": next_due, "tech": technician, "res": result, "rem": remarks})
         recalculate_equipment_dates(conn, eq_id)
         conn.commit()
-        clear_all_caches()
+        clear_data_cache_only() # 🛑 ล้างแคชเฉพาะข้อมูลตาราง
     finally: conn.close()
 
 def update_service_record(record_id, new_date, new_tech, new_res, new_rem):
@@ -271,7 +275,7 @@ def update_service_record(record_id, new_date, new_tech, new_res, new_rem):
         conn.execute(text("UPDATE service_records SET service_date = :s_date, next_due_date = :n_due, technician = :tech, result = :res, remarks = :rem WHERE id = :id"), {"s_date": new_date, "n_due": next_due, "tech": new_tech, "res": new_res, "rem": new_rem, "id": record_id})
         recalculate_equipment_dates(conn, rec[0])
         conn.commit()
-        clear_all_caches()
+        clear_data_cache_only() # 🛑 ล้างแคชเฉพาะข้อมูลตาราง
     finally: conn.close()
 
 def delete_service_record(record_id):
@@ -281,5 +285,5 @@ def delete_service_record(record_id):
         conn.execute(text("DELETE FROM service_records WHERE id = :id"), {"id": record_id})
         if rec: recalculate_equipment_dates(conn, rec[0])
         conn.commit()
-        clear_all_caches()
+        clear_data_cache_only() # 🛑 ล้างแคชเฉพาะข้อมูลตาราง
     finally: conn.close()
