@@ -35,25 +35,26 @@ def logout():
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,0,0');
     
     .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #f8fafc !important; }
+    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown { color: #f8fafc !important; }
     
-    html, body, [class*="css"], .stMarkdown, .stText, p, span, div, input, select, textarea, button { font-family: 'Sarabun', sans-serif !important; }
+    /* ถอด span และ button ออกจากการบังคับฟอนต์ เพื่อไม่ให้กระทบไอคอนระบบ */
+    html, body, [class*="css"], .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    /* 🛑 แก้บั๊กให้ปุ่ม Toggle รหัสผ่านกลับมาเป็นรูปลูกตา 🛑 */
-    .stTextInput div[data-baseweb="input"] button span, 
-    .stTextInput div[data-baseweb="input"] button * {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    /* 🛑 คืนชีพรูปลูกตา (Visibility Icon) 🛑 */
+    div[data-baseweb="input"] button span, div[data-baseweb="input"] button * {
+        font-family: 'Material Symbols Rounded', sans-serif !important;
         color: #94A3B8 !important;
         font-size: 1.2rem !important;
     }
 
-    button[kind="primary"] { background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
+    button[kind="primary"] { font-family: 'Sarabun', sans-serif !important; background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
     button[kind="primary"]:hover { background-color: #047857 !important; border-color: #047857 !important; }
-    button[kind="secondary"] { background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
+    button[kind="secondary"] { font-family: 'Sarabun', sans-serif !important; background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
     button[kind="secondary"]:hover { background-color: #475569 !important; border-color: #64748b !important; }
 
     .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
@@ -215,39 +216,50 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                         if st.session_state.branch == del_b: st.session_state.branch = branches[0]
                         trigger_notification("ลบสาขาสำเร็จ")
                         st.rerun()
-    if role == "super_admin":
+   if role == "super_admin":
         with tabs[2]:
             users_df = db.get_all_users()
-            user_opts = {f"👤 {r['username']} (ยศ: {r['role']} | สาขา: {r['branch']})": r['id'] for _, r in users_df.iterrows()}
             
-            st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>มอบยศ / เปลี่ยนสาขา</p>", unsafe_allow_html=True)
+            # 🛑 เพิ่มตัวกรองสาขา 🛑
+            st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>กรองรายชื่อตามสาขา</p>", unsafe_allow_html=True)
+            filter_branch = st.selectbox("เลือกสาขาที่ต้องการดู", ["ทั้งหมด"] + branches, key="filter_branch_sel")
             
-            # 🛑 นำระบบมอบยศออกจาก st.form เพื่อให้ข้อมูลเรียลไทม์ เซฟได้ชัวร์ 100% 🛑
-            sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()), key="edit_user_sel")
-            target_uid = user_opts[sel_u]
-            curr_u = users_df[users_df['id'] == target_uid].iloc[0]
-            
-            new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']), key="role_sel")
-            b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
-            new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx, key="branch_sel")
-            
-            if st.button("บันทึกการเปลี่ยนแปลงสิทธิ์", type="primary", use_container_width=True):
-                db.update_user_role_branch(target_uid, new_r, new_b)
-                trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
-                st.rerun()
-
-            st.markdown("<br><p style='font-weight:600; margin-bottom:0.5rem; color:#EF4444;'>ลบบัญชีผู้ใช้งาน</p>", unsafe_allow_html=True)
-            del_u = st.selectbox("เลือกบัญชีที่ต้องการลบ", list(user_opts.keys()), key="del_user_sel")
-            if st.button("ลบบัญชีนี้", type="secondary", use_container_width=True):
-                del_uid = user_opts[del_u]
-                target_username = users_df[users_df['id'] == del_uid].iloc[0]['username']
+            if filter_branch != "ทั้งหมด":
+                users_df = users_df[users_df['branch'] == filter_branch]
                 
-                if target_username == st.session_state.username:
-                    st.error("ไม่อนุญาตให้ลบบัญชีของตัวเองที่กำลังใช้งานอยู่ได้")
-                else:
-                    db.delete_user(del_uid)
-                    trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
+            if users_df.empty:
+                st.info("ไม่มีบัญชีผู้ใช้งานในสาขานี้")
+            else:
+                user_opts = {f"👤 {r['username']} (ยศ: {r['role']} | สาขา: {r['branch']})": r['id'] for _, r in users_df.iterrows()}
+                
+                st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+                st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>มอบยศ / เปลี่ยนสาขา</p>", unsafe_allow_html=True)
+                
+                sel_u = st.selectbox("เลือกบัญชีผู้ใช้", list(user_opts.keys()), key="edit_user_sel")
+                target_uid = user_opts[sel_u]
+                curr_u = users_df[users_df['id'] == target_uid].iloc[0]
+                
+                new_r = st.selectbox("กำหนดระดับสิทธิ์ (Role)", ["user", "admin", "super_admin"], index=["user", "admin", "super_admin"].index(curr_u['role']), key="role_sel")
+                b_idx = branches.index(curr_u['branch']) if curr_u['branch'] in branches else 0
+                new_b = st.selectbox("สาขาที่รับผิดชอบ", branches, index=b_idx, key="branch_sel")
+                
+                if st.button("บันทึกการเปลี่ยนแปลงสิทธิ์", type="primary", use_container_width=True):
+                    db.update_user_role_branch(target_uid, new_r, new_b)
+                    trigger_notification("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ")
                     st.rerun()
+
+                st.markdown("<br><p style='font-weight:600; margin-bottom:0.5rem; color:#EF4444;'>ลบบัญชีผู้ใช้งาน</p>", unsafe_allow_html=True)
+                del_u = st.selectbox("เลือกบัญชีที่ต้องการลบ", list(user_opts.keys()), key="del_user_sel")
+                if st.button("ลบบัญชีนี้", type="secondary", use_container_width=True):
+                    del_uid = user_opts[del_u]
+                    target_username = users_df[users_df['id'] == del_uid].iloc[0]['username']
+                    
+                    if target_username == st.session_state.username:
+                        st.error("ไม่อนุญาตให้ลบบัญชีของตัวเองที่กำลังใช้งานอยู่ได้")
+                    else:
+                        db.delete_user(del_uid)
+                        trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
+                        st.rerun()
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
     with st.form("modal_edit_form"):
