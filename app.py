@@ -35,21 +35,18 @@ def logout():
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,0,0');
     
     .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
     h1, h2, h3, h4, h5, h6, p, label, .stMarkdown { color: #f8fafc !important; }
     
-    /* ถอด span และ button ออกจากการบังคับฟอนต์ เพื่อไม่ให้กระทบไอคอนระบบ */
-    html, body, [class*="css"], .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif !important; }
+    /* บังคับเฉพาะตัวหนังสือหลัก ไม่ให้กระทบปุ่มรูปลูกตา (visibili) */
+    html, body, .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    /* 🛑 คืนชีพรูปลูกตา (Visibility Icon) 🛑 */
-    div[data-baseweb="input"] button span, div[data-baseweb="input"] button * {
-        font-family: 'Material Symbols Rounded', sans-serif !important;
-        color: #94A3B8 !important;
-        font-size: 1.2rem !important;
+    /* คืนค่าฟอนต์ไอคอนให้ระบบของ Streamlit ป้องกันคำว่า visibili */
+    button[title="Show password text"], button[title="Hide password text"], div[data-baseweb="input"] button {
+        font-family: inherit !important;
     }
 
     button[kind="primary"] { font-family: 'Sarabun', sans-serif !important; background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
@@ -76,7 +73,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 3. หน้าล็อกอิน & สมัครสมาชิก (UI ใหม่แบบ HextaUI Clone)
+# 3. หน้าล็อกอิน & สมัครสมาชิก
 # -------------------------------------------------------------
 BRANCH_LIST = db.get_branches()
 hospital_name = db.get_hospital_name()
@@ -94,13 +91,12 @@ if not st.session_state.logged_in:
     </style>
     """, unsafe_allow_html=True)
 
-    # ใส่โลโก้หน้าล็อกอิน (ดึงจากไฟล์ logo.png)
-    col_img1, col_img2, col_img3 = st.columns([1, 0.25, 1])
+    col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
     with col_img2:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
-            st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center; margin: auto;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
     
     st.markdown(f"<h2 style='text-align: center; color: white; font-family: Prompt; margin-bottom: 2rem;'>{hospital_name}</h2>", unsafe_allow_html=True)
 
@@ -132,7 +128,7 @@ if not st.session_state.logged_in:
                 st.markdown("<p style='color:#888; text-align:center;'>สมาชิกใหม่จะได้รับสิทธิ์เป็น 'ผู้ใช้งานทั่วไป'</p>", unsafe_allow_html=True)
                 new_user = st.text_input("ตั้งชื่อผู้ใช้งาน")
                 new_pw = st.text_input("ตั้งรหัสผ่าน", type="password")
-                confirm_pw = st.text_input("ยืนยันรหัสผ่าน", type="password") # เพิ่มช่องยืนยันรหัสผ่าน
+                confirm_pw = st.text_input("ยืนยันรหัสผ่าน", type="password")
                 sel_branch = st.selectbox("เลือกสาขาที่ปฏิบัติงาน", BRANCH_LIST)
                 
                 if st.form_submit_button("ยืนยันสมัครสมาชิก (Sign up)", type="primary", use_container_width=True):
@@ -154,7 +150,8 @@ if not st.session_state.logged_in:
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    st.stop()
+    st.stop() 
+
 # -------------------------------------------------------------
 # 4. ฟังก์ชันหลักสำหรับคนล็อกอินแล้ว
 # -------------------------------------------------------------
@@ -169,7 +166,6 @@ def calculate_status(due_date_str):
         else: return f"ปกติ ({days_left} วัน)", 100, "normal"
     except: return "ข้อมูลไม่ถูกต้อง", 0, "none"
 
-# --- Dialog จัดการระบบ (Admin และ Super Admin เท่านั้น) ---
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
@@ -198,7 +194,6 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
                     st.rerun()
 
-        # 🛑 จำกัดสิทธิ์: เฉพาะ Super Admin เท่านั้นถึงจะเพิ่มและลบสาขาได้ 🛑
         if role == "super_admin":
             with st.form("add_b_form"):
                 add_b = st.text_input("เพิ่มสาขาใหม่")
@@ -216,11 +211,11 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                         if st.session_state.branch == del_b: st.session_state.branch = branches[0]
                         trigger_notification("ลบสาขาสำเร็จ")
                         st.rerun()
-   if role == "super_admin":
+
+    if role == "super_admin":
         with tabs[2]:
             users_df = db.get_all_users()
             
-            # 🛑 เพิ่มตัวกรองสาขา 🛑
             st.markdown("<p style='font-weight:600; margin-bottom:0.5rem; color:#94A3B8;'>กรองรายชื่อตามสาขา</p>", unsafe_allow_html=True)
             filter_branch = st.selectbox("เลือกสาขาที่ต้องการดู", ["ทั้งหมด"] + branches, key="filter_branch_sel")
             
@@ -260,6 +255,7 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                         db.delete_user(del_uid)
                         trigger_notification(f"ลบบัญชี {target_username} ออกจากระบบแล้ว")
                         st.rerun()
+
 @st.dialog("แก้ไขประวัติ")
 def edit_record_modal(record):
     with st.form("modal_edit_form"):
@@ -299,7 +295,7 @@ with col_h1:
     c_logo, c_text = st.columns([0.25, 1]) 
     with c_logo:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
             pass
     with c_text:
@@ -307,13 +303,10 @@ with col_h1:
         
         if st.session_state.role == "super_admin":
             if st.session_state.branch not in BRANCH_LIST: st.session_state.branch = BRANCH_LIST[0] if BRANCH_LIST else ""
-            
-            # 🛑 แก้บั๊กสลับสาขายาก: ให้ตรวจจับการเปลี่ยนแปลงแล้วรีเฟรชทันที
             sel_b = st.selectbox("สลับดูสาขา (สิทธิ์เจ้าของระบบ):", BRANCH_LIST, index=BRANCH_LIST.index(st.session_state.branch))
             if sel_b != st.session_state.branch:
                 st.session_state.branch = sel_b
                 st.rerun()
-                
         else:
             role_th = "แอดมินสาขา" if st.session_state.role == "admin" else "ผู้ใช้งานทั่วไป"
             st.markdown(f"<p style='color: #94A3B8; font-size: 1rem; margin-top: -5px;'>พื้นที่ปฏิบัติงาน: <b>{st.session_state.branch}</b> <span style='color:#10B981;'>[{role_th}]</span></p>", unsafe_allow_html=True)
@@ -321,12 +314,12 @@ with col_h1:
 with col_h2:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     if st.session_state.role in ["admin", "super_admin"]:
-        if st.button(" ตั้งค่าระบบ", use_container_width=True):
+        if st.button("⚙️ ตั้งค่าระบบ", use_container_width=True):
             manage_org_modal(hospital_name, BRANCH_LIST, st.session_state.branch, st.session_state.role)
 
 with col_h3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button(" ออกจากระบบ", type="secondary", use_container_width=True):
+    if st.button("🚪 ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
 # แจ้งเตือนกลางจอ
@@ -406,13 +399,9 @@ with tab_manage:
         if st.form_submit_button("บันทึกข้อมูลเครื่องจักร", type="primary"):
             if not new_code.strip() or not new_name.strip() or not custom_type.strip(): st.error("กรุณากรอกข้อมูลบังคับ (*) ให้ครบถ้วน")
             else:
-                with st.spinner("⏳ กำลังบันทึกข้อมูล..."):
-                    try:
-                        db.add_equipment(new_code.strip(), new_name.strip(), custom_type.strip(), new_brand.strip(), new_loc.strip(), int(new_pm_freq), int(new_cal_freq), str(last_pm) if last_pm else None, str(last_cal) if last_cal else None, st.session_state.branch)
-                        trigger_notification("ลงทะเบียนเรียบร้อย")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(str(e))
+                db.add_equipment(new_code.strip(), new_name.strip(), custom_type.strip(), new_brand.strip(), new_loc.strip(), int(new_pm_freq), int(new_cal_freq), str(last_pm) if last_pm else None, str(last_cal) if last_cal else None, st.session_state.branch)
+                trigger_notification("ลงทะเบียนเรียบร้อย")
+                st.rerun()
 
     if not df_equipments.empty:
         st.markdown("<br><h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลบข้อมูลเครื่องจักร</h3>", unsafe_allow_html=True)
@@ -438,18 +427,15 @@ with tab_log:
                 task_type = st.radio("ประเภทงาน *", ["PM", "Calibration"], horizontal=True)
                 service_date = st.date_input("วันที่ดำเนินการ *", value=date.today())
             with col2:
-                # 🛑 แก้ไข: ปล่อยว่างให้พิมพ์ชื่อช่างได้อย่างอิสระ 🛑
-                technician = st.text_input("ผู้ดำเนินการ *", placeholder="ระบุชื่อผู้ดำเนินการ")
+                technician = st.text_input("ผู้ดำเนินการ *", placeholder="ระบุชื่อช่าง/ผู้ดำเนินการ")
                 result = st.selectbox("ผลการตรวจสอบ *", ["Passed", "Passed with Condition", "Failed"])
                 remarks = st.text_area("หมายเหตุ")
-            
             if st.form_submit_button("บันทึกประวัติ", type="primary"):
                 if not technician.strip(): st.error("กรุณาระบุผู้ดำเนินการ")
                 else:
                     if db.check_duplicate_service(int(eq_options[selected_label]), task_type, str(service_date)): 
                         st.warning("มีประวัติในระบบแล้ว")
                     else:
-                        # นำ Spinner ออกเพื่อให้ระบบไม่ต้องเสียเวลาวาดกราฟิกโหลด เซฟแล้วไปเลยทันที
                         db.log_service(int(eq_options[selected_label]), task_type, str(service_date), technician.strip(), result, remarks.strip())
                         trigger_notification("บันทึกสำเร็จ")
                         st.rerun()
@@ -481,7 +467,6 @@ with tab_history:
             </div>
             """, unsafe_allow_html=True)
 
-            # ----------------- ตาราง PM -----------------
             st.markdown("<h4 style='color:#10B981; font-size:1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem;'>ประวัติ Preventive Maintenance (PM)</h4>", unsafe_allow_html=True)
             if pm_records.empty:
                 st.info("ไม่มีประวัติ PM")
@@ -490,7 +475,6 @@ with tab_history:
                 pm_records.insert(0, 'ลำดับ', range(1, len(pm_records) + 1))
                 st.dataframe(pm_records[["ลำดับ", "service_date", "technician", "result", "remarks"]], hide_index=True, use_container_width=True)
 
-            # ----------------- ตาราง Calibration -----------------
             st.markdown("<h4 style='color:#3B82F6; font-size:1.1rem; margin-top: 2rem; margin-bottom: 0.5rem;'>ประวัติ Calibration</h4>", unsafe_allow_html=True)
             if cal_records.empty:
                 st.info("ไม่มีประวัติ Calibration")
@@ -499,7 +483,6 @@ with tab_history:
                 cal_records.insert(0, 'ลำดับ', range(1, len(cal_records) + 1))
                 st.dataframe(cal_records[["ลำดับ", "service_date", "technician", "result", "remarks"]], hide_index=True, use_container_width=True)
 
-            # ----------------- ส่วนแก้ไข / ลบ ข้อมูล -----------------
             st.markdown("<br><p style='font-size:1rem; color:#94A3B8; margin-bottom:0.5rem;'>จัดการข้อมูลประวัติ</p>", unsafe_allow_html=True)
             rec_options = {f"{r['service_date']} | {r['task_type']} | {r['result']}": r for _, r in eq_records.iterrows()}
             c_rec1, c_rec2, c_rec3 = st.columns([2, 1, 1])
@@ -508,6 +491,7 @@ with tab_history:
                 if st.button("แก้ไขรายการ", type="primary", use_container_width=True): edit_record_modal(target_record)
             with c_rec3:
                 if st.button("ลบรายการ", type="secondary", use_container_width=True): delete_record_modal(target_record["id"], target_record['task_type'])
+
 # =============================================================
 with tab_calc:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1.5rem;'>ระบบจำลองการคำนวณรอบ</h3>", unsafe_allow_html=True)
