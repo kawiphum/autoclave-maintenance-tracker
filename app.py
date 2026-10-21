@@ -30,50 +30,70 @@ def logout():
     st.rerun()
 
 # -------------------------------------------------------------
-# 2. Custom CSS
+# 2. Custom CSS (21st.dev / Modern SaaS Style)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,0,0');
     
-    .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
-    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown { color: #f8fafc !important; }
+    /* พื้นหลังดำลึก (Jet Black) แบบ SaaS ยุคใหม่ */
+    .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #09090b !important; }
+    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown { color: #fafafa !important; }
     
     html, body, [class*="css"], .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif !important; }
-    h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
+    h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; letter-spacing: -0.02em; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    /* คืนชีพรูปลูกตา (Visibility Icon) */
+    /* ไอคอนรูปลูกตา (Visibility Icon) */
     div[data-baseweb="input"] button span, div[data-baseweb="input"] button * {
-        font-family: 'Material Symbols Rounded', sans-serif !important;
-        color: #94A3B8 !important;
-        font-size: 1.2rem !important;
+        font-family: 'Material Symbols Rounded', sans-serif !important; color: #a1a1aa !important; font-size: 1.2rem !important;
     }
 
-    button[kind="primary"] { font-family: 'Sarabun', sans-serif !important; background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
-    button[kind="primary"]:hover { background-color: #047857 !important; border-color: #047857 !important; }
-    button[kind="secondary"] { font-family: 'Sarabun', sans-serif !important; background-color: #334155 !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; font-weight: 500 !important; }
-    button[kind="secondary"]:hover { background-color: #475569 !important; border-color: #64748b !important; }
+    /* 🛑 ปุ่มกดสไตล์ 21st.dev: ปุ่มหลักสีขาว-ตัวอักษรดำ, ปุ่มรองสีดำ-ขอบเทาบาง 🛑 */
+    button[kind="primary"] { 
+        font-family: 'Sarabun', sans-serif !important; background-color: #fafafa !important; color: #09090b !important; 
+        border: 1px solid #fafafa !important; border-radius: 8px !important; font-weight: 600 !important; 
+        padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(255,255,255,0.1);
+    }
+    button[kind="primary"]:hover { background-color: #e4e4e7 !important; border-color: #e4e4e7 !important; transform: translateY(-1px); }
+    
+    button[kind="secondary"] { 
+        font-family: 'Sarabun', sans-serif !important; background-color: #18181b !important; color: #fafafa !important; 
+        border: 1px solid #27272a !important; border-radius: 8px !important; font-weight: 500 !important; transition: all 0.2s ease;
+    }
+    button[kind="secondary"]:hover { background-color: #27272a !important; border-color: #3f3f46 !important; }
 
-    .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
-    .metric-card { background-color: #1e293b; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; }
-    .metric-title { font-size: 1rem; color: #94a3b8; margin-bottom: 0.5rem; }
-    .metric-value { font-size: 2rem; font-weight: 600; color: #f8fafc; }
-    .stTabs [data-baseweb="tab-list"] { gap: 2rem; border-bottom: 1px solid #334155; background-color: transparent; }
-    .stTabs [data-baseweb="tab"] { height: 50px; padding: 0; font-size: 1.05rem; color: #94a3b8; border: none; background: transparent; }
-    .stTabs [aria-selected="true"] { color: #f8fafc !important; border-bottom: 3px solid #059669 !important; }
+    /* การ์ดสถิติ (Metrics) เน้นความเรียบแบน */
+    .metric-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+    .metric-card { background-color: #09090b; padding: 1.5rem; border-radius: 12px; border: 1px solid #27272a; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+    .metric-title { font-size: 0.8rem; color: #a1a1aa; margin-bottom: 0.5rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-value { font-size: 2.2rem; font-weight: 600; color: #fafafa; }
 
-    div[data-testid="stForm"] { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 2rem; }
+    /* แท็บเมนูแบบเส้นบาง (Clean Underline) */
+    .stTabs [data-baseweb="tab-list"] { gap: 1.5rem; border-bottom: 1px solid #27272a; background-color: transparent; }
+    .stTabs [data-baseweb="tab"] { height: 50px; padding: 0; font-size: 1rem; color: #a1a1aa; border: none; background: transparent; font-weight: 500; }
+    .stTabs [aria-selected="true"] { color: #fafafa !important; border-bottom: 2px solid #fafafa !important; }
+
+    /* 🛑 ช่องกรอกข้อมูล (Inputs): พื้นหลังทึบ ขอบบางเรืองแสงตอนคลิก 🛑 */
+    div[data-testid="stForm"] { background-color: #09090b; border: 1px solid #27272a; border-radius: 12px; padding: 2.5rem 2rem; }
     div[data-baseweb="base-input"], div[data-baseweb="input"], div[data-baseweb="select"] > div, 
     textarea, input, .stDateInput input, .stTextInput input, .stNumberInput input {
-        background-color: #1e293b !important; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; padding: 0.5rem !important;
+        background-color: #18181b !important; color: #fafafa !important; -webkit-text-fill-color: #fafafa !important; 
+        border: 1px solid #27272a !important; border-radius: 8px !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease;
     }
-    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #059669 !important; box-shadow: 0 0 0 1px #059669 !important; }
-    div[data-baseweb="calendar"], div[data-baseweb="popover"] { background-color: #1e293b !important; border: 1px solid #334155 !important; }
+    input:focus, textarea:focus, div[data-baseweb="select"] > div:focus { border-color: #3f3f46 !important; box-shadow: 0 0 0 2px rgba(255,255,255,0.1) !important; }
+    
+    /* ปฏิทินและ Dropdown */
+    div[data-baseweb="calendar"], div[data-baseweb="popover"], ul[role="listbox"] { 
+        background-color: #18181b !important; border: 1px solid #27272a !important; border-radius: 8px !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1) !important;
+    }
+    ul[role="listbox"] li:hover, div[data-baseweb="calendar"] div[role="button"]:hover { background-color: #27272a !important; }
+    
+    /* สีของ Label (ป้ายกำกับ) ให้ดรอปความสว่างลง */
+    label, .st-emotion-cache-1wivap2 { color: #a1a1aa !important; font-weight: 400 !important; font-size: 0.9rem !important; }
 </style>
 """, unsafe_allow_html=True)
-
 # -------------------------------------------------------------
 # 3. หน้าล็อกอิน & สมัครสมาชิก
 # -------------------------------------------------------------
@@ -361,15 +381,21 @@ with tab_overview:
 
     st.markdown(f"""
     <div class="metric-container">
-        <div class="metric-card"><div class="metric-title">เครื่องจักรทั้งหมด</div><div class="metric-value" style="color:#10B981;">{total_eq}</div></div>
-        <div class="metric-card"><div class="metric-title">ประวัติการตรวจสอบ</div><div class="metric-value" style="color:#3B82F6;">{total_services}</div></div>
-        <div class="metric-card"><div class="metric-title">ใกล้ครบกำหนด</div><div class="metric-value" style="color:#F59E0B;">{warning_cnt}</div></div>
-        <div class="metric-card"><div class="metric-title">เลยกำหนด</div><div class="metric-value" style="color:#EF4444;">{overdue_cnt}</div></div>
+        <div class="metric-card"><div class="metric-title">TOTAL EQUIPMENTS</div><div class="metric-value">{total_eq}</div></div>
+        <div class="metric-card"><div class="metric-title">RECORDS LOGGED</div><div class="metric-value">{total_services}</div></div>
+        <div class="metric-card"><div class="metric-title">DUE SOON</div><div class="metric-value" style="color: #facc15;">{warning_cnt}</div></div>
+        <div class="metric-card"><div class="metric-title">OVERDUE</div><div class="metric-value" style="color: #f87171;">{overdue_cnt}</div></div>
     </div>
     """, unsafe_allow_html=True)
 
     if df_equipments.empty:
-        st.info("ไม่มีข้อมูลในระบบ")
+        # เปลี่ยน Empty State ให้ดูมีความเป็น UI สมัยใหม่
+        st.markdown("""
+        <div style='display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 2rem; border: 1px dashed #27272a; border-radius: 12px; background-color: #09090b; margin-top: 1rem;'>
+            <span style='font-family: "Material Symbols Rounded", sans-serif; font-size: 2.5rem; color: #3f3f46; margin-bottom: 0.8rem;'>inventory_2</span>
+            <span style='font-size: 1.1rem; font-weight: 500; color: #a1a1aa;'>ยังไม่มีข้อมูลเครื่องจักรในระบบ</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         view_df = pd.DataFrame(processed_rows)
         c1, c2 = st.columns([1, 1])
@@ -379,7 +405,6 @@ with tab_overview:
         filtered_df = view_df[view_df["ประเภท"].isin(selected_types)]
         if search_text: filtered_df = filtered_df[filtered_df["รหัส"].str.contains(search_text, case=False, na=False) | filtered_df["ชื่ออุปกรณ์"].str.contains(search_text, case=False, na=False)]
         st.dataframe(filtered_df, hide_index=True, use_container_width=True)
-
 # =============================================================
 with tab_manage:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ลงทะเบียนเครื่องจักรใหม่</h3>", unsafe_allow_html=True)
@@ -461,15 +486,16 @@ with tab_history:
             pm_records = eq_records[eq_records["task_type"] == "PM"].copy()
             cal_records = eq_records[eq_records["task_type"] == "Calibration"].copy()
 
+           # ดีไซน์ Card สรุปจำนวนครั้งแบบ Minimalist
             st.markdown(f"""
-            <div style='display: flex; gap: 1rem; margin-bottom: 1.2rem;'>
-                <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
-                    <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม PM สะสม</div>
-                    <div style='color: #10B981; font-size: 1.5rem; font-weight: 600;'>{len(pm_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+            <div style='display: flex; gap: 1.2rem; margin-bottom: 2rem;'>
+                <div style='background-color: #09090b; padding: 1.2rem 1.5rem; border-radius: 12px; border: 1px solid #27272a; width: 50%; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);'>
+                    <div style='color: #a1a1aa; font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;'>PM RECORDS</div>
+                    <div style='color: #fafafa; font-size: 1.8rem; font-weight: 600;'>{len(pm_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #52525b;'>ครั้ง</span></div>
                 </div>
-                <div style='background-color: #1e293b; padding: 0.8rem 1.2rem; border-radius: 6px; border: 1px solid #334155; width: 50%;'>
-                    <div style='color: #94A3B8; font-size: 0.9rem;'>ยอดรวม Calibration สะสม</div>
-                    <div style='color: #3B82F6; font-size: 1.5rem; font-weight: 600;'>{len(cal_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #94A3B8;'>ครั้ง</span></div>
+                <div style='background-color: #09090b; padding: 1.2rem 1.5rem; border-radius: 12px; border: 1px solid #27272a; width: 50%; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);'>
+                    <div style='color: #a1a1aa; font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;'>CALIBRATION RECORDS</div>
+                    <div style='color: #fafafa; font-size: 1.8rem; font-weight: 600;'>{len(cal_records)} <span style='font-size: 0.9rem; font-weight: 400; color: #52525b;'>ครั้ง</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
