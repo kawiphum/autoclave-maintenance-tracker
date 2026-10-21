@@ -330,11 +330,14 @@ with col_h3:
     if st.button("ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
-# ระบบแจ้งเตือนแบบ Minimalist มุมขวาล่าง
-if "success_msg" in st.session_state:
-    st.toast(st.session_state["success_msg"])
-    del st.session_state["success_msg"]
-df_equipments, df_records = db.get_branch_data_cached(st.session_state.branch)
+# แจ้งเตือนกลางจอ
+noti_container = st.container()
+with noti_container:
+    if "success_msg" in st.session_state:
+        st.success(st.session_state["success_msg"])
+        del st.session_state["success_msg"]
+    else:
+        st.markdown("<div style='height: 0px;'></div>", unsafe_allow_html=True)
 
 tab_overview, tab_manage, tab_log, tab_history, tab_calc = st.tabs([
     "ภาพรวมระบบ", "ทะเบียนเครื่องจักร", "บันทึกผลตรวจสอบ", "ประวัติข้อมูล", "คำนวณรอบ"
