@@ -330,15 +330,10 @@ with col_h3:
     if st.button("ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
-# แจ้งเตือนกลางจอ
-noti_container = st.container()
-with noti_container:
-    if "success_msg" in st.session_state:
-        st.success(st.session_state["success_msg"])
-        del st.session_state["success_msg"]
-    else:
-        st.markdown("<div style='height: 0px;'></div>", unsafe_allow_html=True)
-
+# ระบบแจ้งเตือนแบบ Minimalist มุมขวาล่าง
+if "success_msg" in st.session_state:
+    st.toast(st.session_state["success_msg"])
+    del st.session_state["success_msg"]
 df_equipments, df_records = db.get_branch_data_cached(st.session_state.branch)
 
 tab_overview, tab_manage, tab_log, tab_history, tab_calc = st.tabs([
@@ -370,7 +365,12 @@ with tab_overview:
     """, unsafe_allow_html=True)
 
     if df_equipments.empty:
-        st.info("ไม่มีข้อมูลในระบบ")
+        st.markdown("""
+    <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
+        <span style='font-size: 1.1rem; font-weight: 500;'>ยังไม่มีข้อมูลในระบบ</span><br>
+        <span style='font-size: 0.9rem; color: #475569;'>โปรดเพิ่มข้อมูลเพื่อเริ่มต้นการทำงาน</span>
+    </div>
+    """, unsafe_allow_html=True)
     else:
         view_df = pd.DataFrame(processed_rows)
         c1, c2 = st.columns([1, 1])
