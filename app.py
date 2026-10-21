@@ -182,23 +182,23 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("อัปเดตชื่อระบบสำเร็จ")
                     st.rerun()
 
- tab_b = tabs[1] if role == "super_admin" else tabs[0]
-    with tab_b:
-        with st.form("rename_form"):
-            # 🛑 จำกัดสิทธิ์แอดมิน: ให้เลือกเปลี่ยนชื่อได้เฉพาะสาขาตัวเองเท่านั้น
-            if role == "super_admin":
-                target_b = st.selectbox("เปลี่ยนชื่อสาขาเดิม", branches, index=branches.index(current_branch) if current_branch in branches else 0)
-            else:
-                st.text_input("สาขาที่ต้องการเปลี่ยนชื่อ (จำกัดสิทธิ์เฉพาะสาขาของคุณ)", value=current_branch, disabled=True)
-                target_b = current_branch
-                
-            new_b = st.text_input("ชื่อใหม่")
-            if st.form_submit_button("บันทึกชื่อใหม่", type="primary", use_container_width=True):
-                if new_b.strip() and new_b.strip() != target_b:
-                    db.rename_branch(target_b, new_b.strip())
-                    if st.session_state.branch == target_b: st.session_state.branch = new_b.strip()
-                    trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
-                    st.rerun()
+     tab_b = tabs[1] if role == "super_admin" else tabs[0]
+        with tab_b:
+            with st.form("rename_form"):
+                # 🛑 จำกัดสิทธิ์แอดมิน: ให้เลือกเปลี่ยนชื่อได้เฉพาะสาขาตัวเองเท่านั้น
+                if role == "super_admin":
+                    target_b = st.selectbox("เปลี่ยนชื่อสาขาเดิม", branches, index=branches.index(current_branch) if current_branch in branches else 0)
+                else:
+                    st.text_input("สาขาที่ต้องการเปลี่ยนชื่อ (จำกัดสิทธิ์เฉพาะสาขาของคุณ)", value=current_branch, disabled=True)
+                    target_b = current_branch
+                    
+                new_b = st.text_input("ชื่อใหม่")
+                if st.form_submit_button("บันทึกชื่อใหม่", type="primary", use_container_width=True):
+                    if new_b.strip() and new_b.strip() != target_b:
+                        db.rename_branch(target_b, new_b.strip())
+                        if st.session_state.branch == target_b: st.session_state.branch = new_b.strip()
+                        trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
+                        st.rerun()
                     
         if role == "super_admin":
             with st.form("add_b_form"):
