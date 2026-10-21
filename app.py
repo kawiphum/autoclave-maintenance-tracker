@@ -369,7 +369,7 @@ with tab_overview:
     </div>
     """, unsafe_allow_html=True)
 
-        if df_equipments.empty:
+    if df_equipments.empty:
         st.markdown("""
         <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
             <span style='font-size: 1.1rem; font-weight: 500;'>ยังไม่มีข้อมูลในระบบ</span><br>
