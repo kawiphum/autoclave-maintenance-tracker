@@ -35,18 +35,20 @@ def logout():
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,0,0');
     
     .stApp, [data-testid="stAppViewContainer"], .stDialog > div { background-color: #0f172a !important; }
     h1, h2, h3, h4, h5, h6, p, label, .stMarkdown { color: #f8fafc !important; }
     
-    /* บังคับเฉพาะตัวหนังสือหลัก ไม่ให้กระทบปุ่มรูปลูกตา (visibili) */
-    html, body, .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif; }
+    html, body, [class*="css"], .stMarkdown, .stText, p, div, input, select, textarea { font-family: 'Sarabun', sans-serif !important; }
     h1, h2, h3, h4, h5, h6, .metric-value, .stTabs [data-baseweb="tab"] { font-family: 'Prompt', sans-serif !important; }
     #MainMenu, footer, header[data-testid="stHeader"] {visibility: hidden;}
 
-    /* คืนค่าฟอนต์ไอคอนให้ระบบของ Streamlit ป้องกันคำว่า visibili */
-    button[title="Show password text"], button[title="Hide password text"], div[data-baseweb="input"] button {
-        font-family: inherit !important;
+    /* คืนชีพรูปลูกตา (Visibility Icon) */
+    div[data-baseweb="input"] button span, div[data-baseweb="input"] button * {
+        font-family: 'Material Symbols Rounded', sans-serif !important;
+        color: #94A3B8 !important;
+        font-size: 1.2rem !important;
     }
 
     button[kind="primary"] { font-family: 'Sarabun', sans-serif !important; background-color: #059669 !important; color: #ffffff !important; border: 1px solid #059669 !important; border-radius: 6px !important; font-weight: 600 !important; padding: 0.5rem 1.5rem !important; transition: all 0.2s ease; }
@@ -94,7 +96,7 @@ if not st.session_state.logged_in:
     col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
     with col_img2:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
             st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center; margin: auto;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
     
@@ -182,24 +184,23 @@ def manage_org_modal(hosp_name, branches, current_branch, role):
                     trigger_notification("อัปเดตชื่อระบบสำเร็จ")
                     st.rerun()
 
-     tab_b = tabs[1] if role == "super_admin" else tabs[0]
-        with tab_b:
-            with st.form("rename_form"):
-                # 🛑 จำกัดสิทธิ์แอดมิน: ให้เลือกเปลี่ยนชื่อได้เฉพาะสาขาตัวเองเท่านั้น
-                if role == "super_admin":
-                    target_b = st.selectbox("เปลี่ยนชื่อสาขาเดิม", branches, index=branches.index(current_branch) if current_branch in branches else 0)
-                else:
-                    st.text_input("สาขาที่ต้องการเปลี่ยนชื่อ (จำกัดสิทธิ์เฉพาะสาขาของคุณ)", value=current_branch, disabled=True)
-                    target_b = current_branch
-                    
-                new_b = st.text_input("ชื่อใหม่")
-                if st.form_submit_button("บันทึกชื่อใหม่", type="primary", use_container_width=True):
-                    if new_b.strip() and new_b.strip() != target_b:
-                        db.rename_branch(target_b, new_b.strip())
-                        if st.session_state.branch == target_b: st.session_state.branch = new_b.strip()
-                        trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
-                        st.rerun()
-                    
+    tab_b = tabs[1] if role == "super_admin" else tabs[0]
+    with tab_b:
+        with st.form("rename_form"):
+            if role == "super_admin":
+                target_b = st.selectbox("เปลี่ยนชื่อสาขาเดิม", branches, index=branches.index(current_branch) if current_branch in branches else 0)
+            else:
+                st.text_input("สาขาที่ต้องการเปลี่ยนชื่อ (จำกัดสิทธิ์เฉพาะสาขาของคุณ)", value=current_branch, disabled=True)
+                target_b = current_branch
+                
+            new_b = st.text_input("ชื่อใหม่")
+            if st.form_submit_button("บันทึกชื่อใหม่", type="primary", use_container_width=True):
+                if new_b.strip() and new_b.strip() != target_b:
+                    db.rename_branch(target_b, new_b.strip())
+                    if st.session_state.branch == target_b: st.session_state.branch = new_b.strip()
+                    trigger_notification("เปลี่ยนชื่อสาขาสำเร็จ")
+                    st.rerun()
+
         if role == "super_admin":
             with st.form("add_b_form"):
                 add_b = st.text_input("เพิ่มสาขาใหม่")
@@ -301,7 +302,7 @@ with col_h1:
     c_logo, c_text = st.columns([0.25, 1]) 
     with c_logo:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
             pass
     with c_text:
