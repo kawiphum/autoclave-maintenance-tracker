@@ -93,7 +93,7 @@ if not st.session_state.logged_in:
     </style>
     """, unsafe_allow_html=True)
 
-    col_img1, col_img2, col_img3 = st.columns([1, 0.4, 1])
+    col_img1, col_img2, col_img3 = st.columns([1, 0.15, 1])
     with col_img2:
         try:
             st.image("logo.png", use_column_width=True)
@@ -102,7 +102,7 @@ if not st.session_state.logged_in:
     
     st.markdown(f"<h2 style='text-align: center; color: white; font-family: Prompt; margin-bottom: 2rem;'>{hospital_name}</h2>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 4, 1])
+    c1, c2, c3 = st.columns([1, 0.15, 1])
     with c2:
         if st.session_state.auth_mode == "login":
             with st.form("login_form"):
