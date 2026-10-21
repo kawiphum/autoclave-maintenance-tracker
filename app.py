@@ -171,7 +171,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "จัดการผู้ใช้งาน"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
@@ -326,7 +326,7 @@ with col_h2:
 
 with col_h3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("🚪 ออกจากระบบ", type="secondary", use_container_width=True):
+    if st.button("ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
 # แจ้งเตือนกลางจอ
