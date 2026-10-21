@@ -341,7 +341,7 @@ with noti_container:
 df_equipments, df_records = db.get_branch_data_cached(st.session_state.branch)
 
 tab_overview, tab_manage, tab_log, tab_history, tab_calc = st.tabs([
-    "ภาพรวมระบบ", "ทะเบียนเครื่องจักร", "บันทึกผลตรวจสอบ", "ประวัติข้อมูล", "คำนวณรอบ"
+    "ภาพรวมระบบ", "เพิ่มเครื่องจักร/ลบ", "บันทึกผลตรวจสอบ", "ประวัติข้อมูล", "คำนวณรอบ"
 ])
 
 # =============================================================
