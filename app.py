@@ -370,7 +370,13 @@ with tab_overview:
     """, unsafe_allow_html=True)
 
     if df_equipments.empty:
-        st.info("ไม่มีข้อมูลในระบบ")
+        if df_equipments.empty:
+        st.markdown("""
+        <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
+            <span style='font-size: 1.1rem; font-weight: 500;'>ยังไม่มีข้อมูลในระบบ</span><br>
+            <span style='font-size: 0.9rem; color: #475569;'>โปรดเพิ่มข้อมูลเพื่อเริ่มต้นการทำงาน</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         view_df = pd.DataFrame(processed_rows)
         c1, c2 = st.columns([1, 1])
@@ -425,7 +431,13 @@ with tab_manage:
 # =============================================================
 with tab_log:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>บันทึกประวัติการตรวจสอบ</h3>", unsafe_allow_html=True)
-    if df_equipments.empty: st.info("ไม่พบข้อมูลเครื่องจักร")
+    if df_equipments.empty: 
+        st.markdown("""
+        <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
+            <span style='font-size: 1.1rem; font-weight: 500;'>ยังไม่มีข้อมูลเครื่องจักร</span><br>
+            <span style='font-size: 0.9rem; color: #475569;'>ไปที่แท็บ "ลงทะเบียนเครื่องจักร" เพื่อเพิ่มอุปกรณ์ก่อนครับ</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         eq_options = {f"[{row['equipment_code']}] {row['name']}": row['id'] for _, row in df_equipments.iterrows()}
         with st.form("service_form", clear_on_submit=True):
@@ -451,7 +463,13 @@ with tab_log:
 # =============================================================
 with tab_history:
     st.markdown("<h3 style='font-size:1.2rem; margin-bottom:1rem;'>ค้นหาและแก้ไขประวัติ</h3>", unsafe_allow_html=True)
-    if df_equipments.empty: st.info("ไม่พบข้อมูล")
+    if df_equipments.empty: 
+        st.markdown("""
+        <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
+            <span style='font-size: 1.1rem; font-weight: 500;'>ไม่มีข้อมูลให้ค้นหา</span><br>
+            <span style='font-size: 0.9rem; color: #475569;'>ระบบยังไม่มีข้อมูลเครื่องจักรให้แสดงประวัติครับ</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         eq_map = {f"[{r['equipment_code']}] {r['name']}": r['id'] for _, r in df_equipments.iterrows()}
         selected_history_eq = st.selectbox("ค้นหาประวัติอุปกรณ์", list(eq_map.keys()), label_visibility="collapsed", key="history_eq_sel")
