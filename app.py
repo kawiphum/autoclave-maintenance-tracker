@@ -97,7 +97,7 @@ if not st.session_state.logged_in:
     col_img1, col_img2, col_img3 = st.columns([1, 0.4, 1])
     with col_img2:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
             st.markdown("""<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); display: flex; align-items: center; justify-content: center; margin: auto;"><div style="width: 44px; height: 44px; border-radius: 50%; background: #1c1c1e; display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-size: 1.2rem; font-weight: bold;">M</span></div></div>""", unsafe_allow_html=True)
     
@@ -172,7 +172,7 @@ def calculate_status(due_date_str):
 @st.dialog("ตั้งค่าระบบและสาขา")
 def manage_org_modal(hosp_name, branches, current_branch, role):
     if role == "super_admin":
-        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "จัดการผู้ใช้งาน"])
+        tabs = st.tabs(["ข้อมูลระบบ", "จัดการสาขา", "👑 จัดการผู้ใช้งาน"])
     else:
         tabs = st.tabs(["จัดการสาขา"])
 
@@ -303,7 +303,7 @@ with col_h1:
     c_logo, c_text = st.columns([0.25, 1]) 
     with c_logo:
         try:
-            st.image("logo.png", use_column_width=True)
+            st.image("logo.jpg", use_column_width=True)
         except:
             pass
     with c_text:
@@ -327,7 +327,7 @@ with col_h2:
 
 with col_h3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("ออกจากระบบ", type="secondary", use_container_width=True):
+    if st.button("🚪 ออกจากระบบ", type="secondary", use_container_width=True):
         logout()
 
 # แจ้งเตือนกลางจอ
@@ -338,6 +338,8 @@ with noti_container:
         del st.session_state["success_msg"]
     else:
         st.markdown("<div style='height: 0px;'></div>", unsafe_allow_html=True)
+
+df_equipments, df_records = db.get_branch_data_cached(st.session_state.branch)
 
 tab_overview, tab_manage, tab_log, tab_history, tab_calc = st.tabs([
     "ภาพรวมระบบ", "ทะเบียนเครื่องจักร", "บันทึกผลตรวจสอบ", "ประวัติข้อมูล", "คำนวณรอบ"
@@ -368,12 +370,7 @@ with tab_overview:
     """, unsafe_allow_html=True)
 
     if df_equipments.empty:
-        st.markdown("""
-    <div style='text-align: center; color: #64748b; padding: 4rem 0; border: 1px dashed #334155; border-radius: 8px; margin-top: 1rem;'>
-        <span style='font-size: 1.1rem; font-weight: 500;'>ยังไม่มีข้อมูลในระบบ</span><br>
-        <span style='font-size: 0.9rem; color: #475569;'>โปรดเพิ่มข้อมูลเพื่อเริ่มต้นการทำงาน</span>
-    </div>
-    """, unsafe_allow_html=True)
+        st.info("ไม่มีข้อมูลในระบบ")
     else:
         view_df = pd.DataFrame(processed_rows)
         c1, c2 = st.columns([1, 1])
