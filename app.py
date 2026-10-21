@@ -102,7 +102,7 @@ if not st.session_state.logged_in:
     
     st.markdown(f"<h2 style='text-align: center; color: white; font-family: Prompt; margin-bottom: 2rem;'>{hospital_name}</h2>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 0.15, 1])
+    c1, c2, c3 = st.columns([1, 1.5, 1])
     with c2:
         if st.session_state.auth_mode == "login":
             with st.form("login_form"):
